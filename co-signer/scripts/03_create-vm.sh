@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source ./00_env.sh
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/00_env.sh"
 
 gcloud compute addresses create "$VM_STATIC_IP_NAME" \
     --project "$GOOGLE_PROJECT_ID" \

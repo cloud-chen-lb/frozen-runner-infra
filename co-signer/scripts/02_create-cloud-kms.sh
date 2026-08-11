@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source ./00_env.sh
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/00_env.sh"
 
 gcloud kms keyrings create "$KMS_KEYRING" \
    --location "$GOOGLE_PROJECT_REGION"

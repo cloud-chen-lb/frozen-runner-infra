@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source ./00_env.sh
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/00_env.sh"
 
 gcloud iam roles create "${ROLE_ID}" \
   --project="${GOOGLE_PROJECT_ID}" \
@@ -40,7 +41,7 @@ cloudsql.databases.list,\
 resourcemanager.projects.get"
 
 gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
-  --member="user:${ROLE_IAM_ACCOUNT}" \
+  --member="user:${EXEC_IAM_ACCOUNT}" \
   --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"
 
-echo "Granted projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID} to user:${ROLE_IAM_ACCOUNT}."
+echo "Granted projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID} to user:${EXEC_IAM_ACCOUNT}."

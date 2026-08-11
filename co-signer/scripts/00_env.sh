@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 
-# 專案名稱
-PROJECT_NAME="frozen-runner"
-# GCP 專案 ID，所有建立與綁定資源的腳本共用
-GOOGLE_PROJECT_ID="echox-beta"
-# GCP 專案資源使用的區域
-GOOGLE_PROJECT_REGION="asia-east1"
-# 要授予自訂 IAM role 的 Google 帳號
-ROLE_IAM_ACCOUNT="cloud.chen@getoken.io"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+GLOBAL_ENV_FILE="${SCRIPT_DIR}/../../global-env/env.sh"
+
+if [[ ! -f "$GLOBAL_ENV_FILE" ]]; then
+  echo "Global environment file not found: $GLOBAL_ENV_FILE" >&2
+  exit 1
+fi
+
+source "$GLOBAL_ENV_FILE"
+
+for variable in PROJECT_NAME GOOGLE_PROJECT_ID GOOGLE_PROJECT_REGION EXEC_IAM_ACCOUNT; do
+  if [[ -z "${!variable:-}" ]]; then
+    echo "${variable} is not configured in $GLOBAL_ENV_FILE" >&2
+    exit 1
+  fi
+done
+
 # 自訂 IAM role 的識別名稱
 ROLE_ID="SafeheronCoSignerBuilderRole"
 # 自訂 IAM role 在 GCP 顯示的名稱

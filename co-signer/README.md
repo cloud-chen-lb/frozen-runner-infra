@@ -1,5 +1,17 @@
 # Safeheron co-singer 安裝
 
+本目錄使用 repo 共用的 `global-env/env.sh`。執行 Co-Signer 建置腳本前，先確認
+其中的 `PROJECT_NAME`、`GOOGLE_PROJECT_ID` 與 `GOOGLE_PROJECT_REGION` 已指向
+目前要操作的 GCP project；腳本不再接受 `dev` 或 `prod` 參數。
+
+依序執行：
+
+```bash
+bash co-signer/scripts/01_setup-exec-iam-account-role.sh
+bash co-signer/scripts/02_create-cloud-kms.sh
+bash co-signer/scripts/03_create-vm.sh
+```
+
 01 ~ 03
 
 產生 callback key
