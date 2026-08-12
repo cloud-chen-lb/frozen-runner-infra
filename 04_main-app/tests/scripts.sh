@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+LOADER="${ROOT_DIR}/04_main-app/scripts/00_env.sh"
+
+test_invalid_env_fails_before_gcloud() {
+  local temp_dir gcloud_calls
+  temp_dir="$(mktemp -d)"
+  gcloud_calls="${temp_dir}/gcloud.calls"
+  trap 'rm -rf "$temp_dir"' RETURN
+
+  cat >"${temp_dir}/global-env.sh" <<'EOF'
+PROJECT_NAME=frozen-runner
+GOOGLE_PROJECT_ID=echox-project
+GOOGLE_PROJECT_REGION=asia-east1
+EXEC_IAM_ACCOUNT=
+EOF
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING=APP_SECRET=frozen-runner-main-app-secret:latest
+MIGRATION_SECRET_MAPPING=DATABASE_URL=frozen-runner-database-url:latest
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${gcloud_calls}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
+    MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${LOADER}"; then
+    printf 'Expected invalid main-app env to fail\n' >&2
+    return 1
+  fi
+  [[ ! -s "${gcloud_calls}" ]]
+}
+
+test_missing_accessor_fails_before_gcloud() {
+  local temp_dir gcloud_calls
+  temp_dir="$(mktemp -d)"
+  gcloud_calls="${temp_dir}/gcloud.calls"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_SECRET=frozen-runner-main-app-secret:latest'
+MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+APP_SERVICE_ACCOUNT_NAME=
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${gcloud_calls}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    printf 'Expected missing accessor to fail\n' >&2
+    return 1
+  fi
+  [[ ! -s "${gcloud_calls}" ]]
+}
+
+test_invalid_accessor_fails_before_gcloud() {
+  local temp_dir gcloud_calls
+  temp_dir="$(mktemp -d)"
+  gcloud_calls="${temp_dir}/gcloud.calls"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_SECRET=frozen-runner-main-app-secret:latest'
+MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+APP_SERVICE_ACCOUNT_NAME='cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com'
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${gcloud_calls}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    printf 'Expected invalid accessor to fail\n' >&2
+    return 1
+  fi
+  [[ ! -s "${gcloud_calls}" ]]
+}
+
+test_valid_env_loads() {
+  bash "${LOADER}" >/dev/null
+}
+
+test_valid_env_can_be_sourced() {
+  (
+    source "${LOADER}"
+    [[ -n "${APP_SECRET_MAPPING:-}" ]]
+  )
+}
+
+test_role_lifecycle_arguments() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "iam roles describe" && -z "\${ROLE_EXISTS:-}" ]]; then exit 1; fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/01_setup-exec-iam-account-role.sh"
+  create_permissions="$(grep -F 'iam roles create MainAppProvisioningOperator' "${log}")"
+  ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/01_setup-exec-iam-account-role.sh"
+  update_permissions="$(grep -F 'iam roles update MainAppProvisioningOperator' "${log}")"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/99_remove-exec-iam-account-role.sh"
+  [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
+  grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
+  grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
+  ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
+}
+
+test_service_accounts_and_deploy_iam() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "iam service-accounts describe" ]]; then exit 1; fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/02_setup-service-accounts.sh"
+  grep -F 'iam service-accounts create cb-frozen-runner-mini' "${log}"
+  grep -F 'iam service-accounts create cb-frozen-runner-migration' "${log}"
+  grep -F 'iam service-accounts create cb-frozen-runner-deploy' "${log}"
+  grep -F 'projects add-iam-policy-binding echox-project --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/run.admin' "${log}"
+  grep -F 'projects add-iam-policy-binding echox-project --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/artifactregistry.reader' "${log}"
+  grep -F 'iam service-accounts add-iam-policy-binding cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/iam.serviceAccountUser' "${log}"
+  grep -F 'iam service-accounts add-iam-policy-binding cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/iam.serviceAccountUser' "${log}"
+  ! grep -Eiq 'secretmanager.*admin|owner|editor|iam.serviceAccountKey|create.*key|\.json|password=|secret-value' "${log}"
+}
+
+test_service_account_drift_fails() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$1 $2 $3" == "iam service-accounts describe" ]]; then
+  printf 'wrong-display-name\n'
+  exit 0
+fi
+printf 'gcloud must not be called after drift\n' >&2
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/02_setup-service-accounts.sh"; then
+    printf 'Expected service account drift to fail\n' >&2
+    return 1
+  fi
+}
+
+test_secrets_metadata_and_scoped_accessors() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2" == "secrets describe" ]]; then exit 1; fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"
+  grep -F 'secrets create frozen-runner-main-app-secret --replication-policy=automatic' "${log}"
+  grep -F 'secrets create frozen-runner-database-url --replication-policy=automatic' "${log}"
+  grep -F 'secrets create frozen-runner-database-user --replication-policy=automatic' "${log}"
+  grep -F 'secrets add-iam-policy-binding frozen-runner-main-app-secret --member=serviceAccount:cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
+  grep -F 'secrets add-iam-policy-binding frozen-runner-database-url --member=serviceAccount:cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
+  grep -F 'secrets add-iam-policy-binding frozen-runner-database-user --member=serviceAccount:cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
+  ! grep -Eiq 'versions add|secret-value|password|private[_-]?key|\.json' "${log}"
+}
+
+test_secret_drift_fails() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$1 $2" == "secrets describe" ]]; then
+  printf 'False\n'
+  exit 0
+fi
+printf 'gcloud must not be called after secret drift\n' >&2
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    printf 'Expected secret replication drift to fail\n' >&2
+    return 1
+  fi
+}
+
+test_invalid_secret_mapping_fails_before_gcloud() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_SECRET=bad value:latest'
+MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf 'gcloud must not be called\n' >&2
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    printf 'Expected invalid secret mapping to fail\n' >&2
+    return 1
+  fi
+}
+
+test_invalid_env_fails_before_gcloud
+test_missing_accessor_fails_before_gcloud
+test_invalid_accessor_fails_before_gcloud
+test_valid_env_loads
+test_valid_env_can_be_sourced
+test_role_lifecycle_arguments
+test_service_accounts_and_deploy_iam
+test_service_account_drift_fails
+test_secrets_metadata_and_scoped_accessors
+test_secret_drift_fails
+test_invalid_secret_mapping_fails_before_gcloud
+printf 'main-app scripts tests passed\n'

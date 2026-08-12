@@ -7,9 +7,9 @@
 依序執行：
 
 ```bash
-bash co-signer/scripts/01_setup-exec-iam-account-role.sh
-bash co-signer/scripts/02_create-cloud-kms.sh
-bash co-signer/scripts/03_create-vm.sh
+bash 05_co-signer/scripts/01_setup-exec-iam-account-role.sh
+bash 05_co-signer/scripts/02_create-cloud-kms.sh
+bash 05_co-signer/scripts/03_create-vm.sh
 ```
 
 01 ~ 03
@@ -32,7 +32,7 @@ openssl rsa -in callback_handler_private.pem -out callback_handler_public.pem -p
 名稱: frozen-runner-co-signer-api
 ip白名單: scripts/scripts/03_create-vm.sh 建立完成以後的 public ip
 callback
-  - URL: {BASE_URL}/api/safeheron/co-signer/callback
+  - URL: {BASE_URL}/api/safeheron/05_co-signer/callback
   - 公鑰: 貼入上面生成的公鑰
 
 

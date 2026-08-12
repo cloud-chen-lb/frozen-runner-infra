@@ -55,7 +55,7 @@ GOOGLE_PROJECT_REGION="YOUR_CLOUD_BUILD_REGION"
 再將 Cloud Build connection/repository 名稱填入 Cloud Build 專用環境檔：
 
 ```text
-cloudbuild/base/scripts/env/env.sh
+01_cloudbuild/base/scripts/env/env.sh
 ```
 
 例如：
@@ -67,7 +67,7 @@ CLOUD_BUILD_REPOSITORY_NAME="frozen-runner-source"
 
 只填名稱，不要填完整的 `projects/...` resource path。腳本會依 project、region 與名稱自動組合完整路徑。
 
-切換 dev 或 prod 時，直接修改 `global-env/env.sh` 的 project 設定；Cloud Build connection/repository 則維持在 `cloudbuild/base/scripts/env/env.sh`。
+切換 dev 或 prod 時，直接修改 `global-env/env.sh` 的 project 設定；Cloud Build connection/repository 則維持在 `01_cloudbuild/base/scripts/env/env.sh`。
 
 ## 執行流程
 
@@ -76,7 +76,7 @@ CLOUD_BUILD_REPOSITORY_NAME="frozen-runner-source"
 ### 1. 建立或確認 GAR
 
 ```bash
-bash cloudbuild/build-image/scripts/01_create-artifact-registry.sh
+bash 01_cloudbuild/build-image/scripts/01_create-artifact-registry.sh
 ```
 
 腳本會建立或確認：
@@ -90,7 +90,7 @@ ${GOOGLE_PROJECT_REGION}-docker.pkg.dev/${GOOGLE_PROJECT_ID}/${PROJECT_NAME}-con
 CI trigger 由 Pull Request 觸發，預設只接受 target branch `master`：
 
 ```bash
-bash cloudbuild/build-image/scripts/00_create-ci-trigger.sh
+bash 01_cloudbuild/build-image/scripts/00_create-ci-trigger.sh
 ```
 
 trigger 會使用 `cb-share-build` service account、Cloud Build v2 repository resource
@@ -100,7 +100,7 @@ pattern、build config、service account 與 region；設定不一致時會停�
 ### 3. 建立或確認 release trigger
 
 ```bash
-bash cloudbuild/build-image/scripts/02_create-release-trigger.sh
+bash 01_cloudbuild/build-image/scripts/02_create-release-trigger.sh
 ```
 
 trigger 設定如下：
@@ -126,7 +126,7 @@ git push origin v1.2.3
 也可以手動執行既有的 automatic trigger。這仍然使用 Git tag 事件：
 
 ```bash
-bash cloudbuild/build-image/scripts/03_run-release-trigger.sh v1.2.3
+bash 01_cloudbuild/build-image/scripts/03_run-release-trigger.sh v1.2.3
 ```
 
 Cloud Build 會依 source repository 的 `cicd/prod/cloudbuild-release.yaml` 建立並 push：
@@ -141,13 +141,13 @@ ${REGION}-docker.pkg.dev/${PROJECT_ID}/${PROJECT_NAME}-container-repository/${PR
 純手動 trigger 使用同一個 Cloud Build repository、CI service account、GAR repository/image names 與 `cicd/prod/cloudbuild-release.yaml`，但不會因為 Git tag 自動執行：
 
 ```bash
-bash cloudbuild/build-image/scripts/05_create-manual-release-trigger.sh
+bash 01_cloudbuild/build-image/scripts/05_create-manual-release-trigger.sh
 ```
 
 預設 source branch 是 `master`。如需其他 branch，建立與執行時都可用不含 secret 的環境變數設定：
 
 ```bash
-CLOUD_BUILD_SOURCE_BRANCH=release bash cloudbuild/build-image/scripts/05_create-manual-release-trigger.sh
+CLOUD_BUILD_SOURCE_BRANCH=release bash 01_cloudbuild/build-image/scripts/05_create-manual-release-trigger.sh
 ```
 
 ### 6. 執行純手動 release trigger
@@ -155,7 +155,7 @@ CLOUD_BUILD_SOURCE_BRANCH=release bash cloudbuild/build-image/scripts/05_create-
 手動 release tag 必須符合 `v<release>`，例如 `v0.1.0-pre`：
 
 ```bash
-bash cloudbuild/build-image/scripts/06_run-manual-release-trigger.sh v0.1.0-pre master
+bash 01_cloudbuild/build-image/scripts/06_run-manual-release-trigger.sh v0.1.0-pre master
 ```
 
 這會將指定 branch 與 tag 傳入 trigger，並將 tag 傳入 `_IMAGE_TAG`。build config 有 `_IMAGE_TAG` 時使用它，否則 automatic `v*` trigger 使用 Cloud Build 的 `TAG_NAME`。
@@ -165,23 +165,17 @@ bash cloudbuild/build-image/scripts/06_run-manual-release-trigger.sh v0.1.0-pre 
 確認 Cloud Build 完成後執行：
 
 ```bash
-bash cloudbuild/build-image/scripts/04_verify-images.sh v0.1.0-pre
+bash 01_cloudbuild/build-image/scripts/04_verify-images.sh v0.1.0-pre
 ```
 
 兩個 image 都成功輸出 digest 才代表 image 已存在於 GAR。
 
-## 本地腳本測試
+## 本地腳本檢查
 
-此測試不會連線或修改 GCP，只驗證錯誤輸入會在執行 `gcloud` 前被拒絕：
-
-```bash
-bash cloudbuild/build-image/tests/scripts.sh
-```
-
-也可以檢查所有 shell script 語法：
+此目錄目前沒有 dedicated local test script；可檢查所有 shell script 語法：
 
 ```bash
-bash -n cloudbuild/base/scripts/*.sh cloudbuild/build-image/scripts/*.sh
+bash -n 01_cloudbuild/base/scripts/*.sh 01_cloudbuild/build-image/scripts/*.sh
 ```
 
 ## 注意事項
