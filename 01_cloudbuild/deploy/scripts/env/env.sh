@@ -1,4 +1,6 @@
-# Defaults mirror cicd/prod/cloudbuild-deploy.yaml. Values are metadata only.
+# 預設值對應 cicd/prod/cloudbuild-deploy.yaml，內容是部署 metadata，不是秘密值。
+# 供 production trigger 與部署腳本使用；mapping 只指向 Secret Manager 名稱/version。
+# APP_VPC_ARGS、MIGRATION_VPC_ARGS 會選定 Cloud Run 網路；DEPLOY_SMOKE_TEST_URL 留空時不做 HTTP 驗證。
 : "${CLOUD_BUILD_SOURCE_BRANCH:=master}"
 : "${APP_SECRET_MAPPING:=APP_INTERNAL_ADMIN_PASSWORD=${PROJECT_NAME}-app-internal-admin-password:latest,APP_ALERT_API_BEARER_TOKEN=${PROJECT_NAME}-app-alert-api-bearer-token:latest,APP_DATA_ENCRYPTION_SECRET=${PROJECT_NAME}-app-data-encryption-secret:latest,APP_DATABASE_URL=${PROJECT_NAME}-app-database-url:latest,APP_MAILGUN_API_KEY=${PROJECT_NAME}-app-mailgun-api-key:latest}"
 : "${MIGRATION_SECRET_MAPPING:=APP_DATABASE_URL=${PROJECT_NAME}-migration-database-url:latest}"

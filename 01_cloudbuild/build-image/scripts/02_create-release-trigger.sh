@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：建立或驗證 v* tag 觸發的正式映像建置 trigger。
+# 流程：組合 repository、app/migration 映像名稱，完整比對既有 trigger 合約後才建立。
+# 重要變數：PROJECT_NAME、GOOGLE_PROJECT_REGION、CLOUD_BUILD_*；資源影響：建立 Cloud Build release trigger。
+# 安全/驗證限制：既有設定漂移時停止；只接受 v 開頭 tag，映像內容由固定 cloudbuild 設定決定。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,8 +31,11 @@ TRIGGER_DESCRIPTION="當推送符合 v* 的版本標籤時，建置並發布正�
 REPOSITORY_RESOURCE="projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_PROJECT_REGION}/connections/${CLOUD_BUILD_CONNECTION_NAME}/repositories/${CLOUD_BUILD_REPOSITORY_NAME}"
 SERVICE_ACCOUNT="projects/${GOOGLE_PROJECT_ID}/serviceAccounts/cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
 
+# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 release trigger 是否存在，不修改資源。
 if gcloud builds triggers describe "$TRIGGER_NAME" \
   --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" >/dev/null 2>&1; then
+  # 以下查詢只讀取 ${GOOGLE_PROJECT_ID} 既有 release trigger 的各項設定，不修改資源。
+  # 逐項取值是為了在建立前檢查 trigger 是否發生設定漂移。
   EXISTING_REPOSITORY="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.repository)')"
   EXISTING_TAG_PATTERN="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.push.tag)')"
   EXISTING_BUILD_CONFIG="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(filename)')"
@@ -55,6 +62,7 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
   exit 0
 fi
 
+# 在 ${GOOGLE_PROJECT_ID} 新增 tag release Cloud Build trigger。
 gcloud builds triggers create github \
   --name="$TRIGGER_NAME" \
   --repository="$REPOSITORY_RESOURCE" \

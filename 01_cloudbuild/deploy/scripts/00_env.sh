@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：載入部署模組與全域環境，驗證部署所需的網路、秘密、執行期與 service account 設定。
+# 流程：讀取 env 檔、以全域專案值覆蓋模組同名值，再驗證必要欄位與 service account ID。
+# 重要變數：APP_VPC_ARGS、MIGRATION_VPC_ARGS、*_SECRET_MAPPING、*_RUNTIME_ENV_VARS、*_SERVICE_ACCOUNT_NAME。
+# 資源影響：只載入/匯出設定，不建立 GCP 資源；格式錯誤會在呼叫 gcloud 前停止。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

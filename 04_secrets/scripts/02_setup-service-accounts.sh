@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：建立或驗證 app、migration、deploy 三個 runtime/deploy service account。
+# 流程：驗證名稱與 display name，建立缺少帳號，並配置 deploy 與 runtime 的最小必要 IAM binding。
+# 重要變數：SERVICE_ACCOUNT_NAMES、*_SERVICE_ACCOUNT_NAME、GOOGLE_PROJECT_ID；資源影響：建立帳號與修改 IAM policy。
+# 安全/驗證限制：display name 漂移時停止；不建立 service account key，也不輸出秘密值。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,9 +14,9 @@ declare -a SERVICE_ACCOUNT_NAMES=(
   "${DEPLOY_SERVICE_ACCOUNT_NAME}"
 )
 declare -a SERVICE_ACCOUNT_DISPLAY_NAMES=(
-  "${PROJECT_NAME} main app runtime"
-  "${PROJECT_NAME} database migration runtime"
-  "${PROJECT_NAME} production deploy"
+  "${PROJECT_NAME} 主應用程式執行環境"
+  "${PROJECT_NAME} 資料庫 migration 執行環境"
+  "${PROJECT_NAME} 正式環境部署"
 )
 
 for service_account_name in "${SERVICE_ACCOUNT_NAMES[@]}"; do
@@ -26,6 +30,7 @@ for index in "${!SERVICE_ACCOUNT_NAMES[@]}"; do
   service_account_name="${SERVICE_ACCOUNT_NAMES[$index]}"
   expected_display_name="${SERVICE_ACCOUNT_DISPLAY_NAMES[$index]}"
   service_account_email="${service_account_name}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+  # 唯讀查詢 ${GOOGLE_PROJECT_ID} service account 的 display name，不修改資源。
   if display_name="$(gcloud iam service-accounts describe "${service_account_email}" \
     --project="${GOOGLE_PROJECT_ID}" --format='value(displayName)' 2>/dev/null)"; then
     [[ "${display_name}" == "${expected_display_name}" ]] || {
@@ -34,19 +39,23 @@ for index in "${!SERVICE_ACCOUNT_NAMES[@]}"; do
       exit 1
     }
   else
+    # 在 ${GOOGLE_PROJECT_ID} 新增 runtime/deploy service account。
     gcloud iam service-accounts create "${service_account_name}" \
       --display-name="${expected_display_name}" --project="${GOOGLE_PROJECT_ID}"
   fi
 done
 
 deploy_email="${DEPLOY_SERVICE_ACCOUNT_NAME}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+# 授權 deploy service account 在 ${GOOGLE_PROJECT_ID} 管理 Cloud Run，修改專案 IAM policy。
 gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
   --member="serviceAccount:${deploy_email}" --role="roles/run.admin"
+# 授權 deploy service account 讀取 ${GOOGLE_PROJECT_ID} 的 Artifact Registry，修改專案 IAM policy。
 gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
   --member="serviceAccount:${deploy_email}" --role="roles/artifactregistry.reader"
 
 for runtime_name in "${APP_SERVICE_ACCOUNT_NAME}" "${MIGRATION_SERVICE_ACCOUNT_NAME}"; do
   runtime_email="${runtime_name}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+  # 授權 deploy service account 模擬 runtime service account，修改 ${GOOGLE_PROJECT_ID} 的帳號 IAM policy。
   gcloud iam service-accounts add-iam-policy-binding "${runtime_email}" \
     --member="serviceAccount:${deploy_email}" \
     --role="roles/iam.serviceAccountUser" --project="${GOOGLE_PROJECT_ID}"

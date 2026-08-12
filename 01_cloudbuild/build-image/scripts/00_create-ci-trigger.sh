@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：建立或驗證 Pull Request CI Cloud Build trigger。
+# 流程：載入連線設定、將來源分支轉成 RE2、比對既有 trigger 合約，不符即停止。
+# 重要變數：CLOUD_BUILD_SOURCE_BRANCH、CLOUD_BUILD_*、TRIGGER_NAME；資源影響：建立 CI trigger。
+# 安全/驗證限制：只接受零參數，既有設定漂移時不自動修正；建置設定固定為 cicd/prod/cloudbuild-ci.yaml。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,13 +52,20 @@ SOURCE_BRANCH_PATTERN="$(escape_re2 "$SOURCE_BRANCH")"
 REPOSITORY_RESOURCE="projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_PROJECT_REGION}/connections/${CLOUD_BUILD_CONNECTION_NAME}/repositories/${CLOUD_BUILD_REPOSITORY_NAME}"
 SERVICE_ACCOUNT="projects/${GOOGLE_PROJECT_ID}/serviceAccounts/cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
 
+# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 CI trigger，不修改資源。
 if gcloud builds triggers describe "$TRIGGER_NAME" \
   --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" >/dev/null 2>&1; then
+  # 唯讀查詢既有 CI trigger 的 repository 設定，不修改資源。
   EXISTING_REPOSITORY="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.repository)')"
+  # 唯讀查詢既有 CI trigger 的分支設定，不修改資源。
   EXISTING_BRANCH_PATTERN="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.pullRequest.branch)')"
+  # 唯讀查詢既有 CI trigger 的 build config，不修改資源。
   EXISTING_BUILD_CONFIG="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(filename)')"
+  # 唯讀查詢既有 CI trigger 的 service account，不修改資源。
   EXISTING_SERVICE_ACCOUNT="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(serviceAccount)')"
+  # 唯讀查詢既有 CI trigger 的區域，不修改資源。
   EXISTING_REGION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(location)')"
+  # 唯讀查詢既有 CI trigger 的說明，不修改資源。
   EXISTING_DESCRIPTION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(description)')"
 
   if [[ "$EXISTING_REPOSITORY" != "$REPOSITORY_RESOURCE" ||
@@ -70,6 +81,7 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
   exit 0
 fi
 
+# 在 ${GOOGLE_PROJECT_ID} 新增 GitHub CI Cloud Build trigger。
 gcloud builds triggers create github \
   --name="$TRIGGER_NAME" \
   --repository="$REPOSITORY_RESOURCE" \

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# 用途：以 release tag 觸發正式部署，並傳遞網路、秘密映射與執行期環境設定。
+# 流程：解析 tag/override，拒絕分隔符與換行，驗證秘密 key 後執行 production trigger。
+# 重要參數：v<release>、_IMAGE_TAG、_APP_SECRET_MAPPING、_MIGRATION_SECRET_MAPPING 及 runtime/VPC 變數。
+# 資源影響：啟動 Cloud Build，間接建立或更新 Cloud Run service/job；秘密值本身不在腳本中保存。
+# 安全/驗證限制：只允許白名單秘密 key、禁止分號/換行；部署結果需另用驗證腳本確認。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,6 +59,7 @@ done
 validate_secret_mapping APP_SECRET_MAPPING "$APP_SECRET_MAPPING"
 validate_secret_mapping MIGRATION_SECRET_MAPPING "$MIGRATION_SECRET_MAPPING"
 
+# 在 ${GOOGLE_PROJECT_ID} 執行 production deployment trigger，啟動 Cloud Run 部署。
 gcloud builds triggers run "${PRODUCTION_TRIGGER_NAME}" \
   --region="${GOOGLE_PROJECT_REGION}" --project="${GOOGLE_PROJECT_ID}" \
   --branch="${CLOUD_BUILD_SOURCE_BRANCH}" \

@@ -1,4 +1,6 @@
-# PostgreSQL configuration. Passwords are supplied outside repository files.
+# PostgreSQL 設定；密碼一律由 repository 外部提供，不寫入本檔。
+# 這些值供 00_env.sh 驗證及 instance/database/user 腳本使用，會影響建立或比對 Cloud SQL 資源。
+# 變更正式環境規格或網路名稱前須確認既有 instance 合約，腳本對漂移採停止而非自動修正。
 POSTGRES_IDENTIFIER_PREFIX="${PROJECT_NAME//-/_}"
 POSTGRES_DATABASE_NAME="${POSTGRES_IDENTIFIER_PREFIX}"
 POSTGRES_APP_USER="${POSTGRES_IDENTIFIER_PREFIX}_app"

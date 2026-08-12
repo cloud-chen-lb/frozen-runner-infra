@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：以 mock gcloud 驗證 Cloud Build 基礎環境載入與 IAM role lifecycle。
+# 流程：建立暫存 env/mock binary，執行 loader 與 role 腳本，再檢查命令參數與權限一致性。
+# 重要變數：ROOT_DIR、LOADER、PATH；資源影響：只建立暫存目錄與測試 log，不呼叫真實 GCP。
+# 安全/驗證限制：測試依 grep 比對命令文字，無法取代實際 GCP 權限或 API 行為驗證。
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"

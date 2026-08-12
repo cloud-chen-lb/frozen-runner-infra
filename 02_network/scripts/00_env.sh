@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：載入網路模組設定並驗證專案、區域與兩個 CIDR。
+# 流程：載入全域/模組 env，檢查 CIDR 與 region 格式後匯出網路資源名稱。
+# 重要變數：MAIN_APP_SUBNET_CIDR、PRIVATE_SERVICES_RANGE_CIDR、NETWORK_NAME、ROUTER_NAME、NAT_NAME。
+# 資源影響：只載入設定；無效值會在建立 VPC 前停止。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

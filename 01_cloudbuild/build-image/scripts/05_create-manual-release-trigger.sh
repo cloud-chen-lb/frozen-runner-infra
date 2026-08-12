@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：建立或驗證指定來源分支的手動正式映像建置 trigger。
+# 流程：以來源分支與固定 substitutions 比對既有設定，漂移時停止，否則建立 trigger。
+# 重要變數：CLOUD_BUILD_SOURCE_BRANCH、PROJECT_NAME、CLOUD_BUILD_*；資源影響：建立 manual trigger。
+# 安全/驗證限制：分支預設為 master；不覆蓋 URI、分支或建置設定不一致的既有 trigger。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,9 +32,13 @@ TRIGGER_DESCRIPTION="從設定的來源分支手動建置並發布正式環境�
 REPOSITORY_RESOURCE="projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_PROJECT_REGION}/connections/${CLOUD_BUILD_CONNECTION_NAME}/repositories/${CLOUD_BUILD_REPOSITORY_NAME}"
 SERVICE_ACCOUNT="projects/${GOOGLE_PROJECT_ID}/serviceAccounts/cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
 
+# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 manual release trigger 是否存在，不修改資源。
 if gcloud builds triggers describe "$TRIGGER_NAME" \
   --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" >/dev/null 2>&1; then
+  # 以下查詢只讀取 ${GOOGLE_PROJECT_ID} 既有 manual release trigger 的各項設定，不修改資源。
+  # 逐項取值是為了在建立前檢查 trigger 是否發生設定漂移。
   EXISTING_REPOSITORY="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.repository)')"
+  # 唯讀查詢 ${GOOGLE_PROJECT_ID} 既有 manual release trigger 的分支，不修改資源。
   EXISTING_BRANCH_PATTERN="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(repositoryEventConfig.push.branch)')"
   EXISTING_BUILD_CONFIG="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(filename)')"
   EXISTING_SERVICE_ACCOUNT="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(serviceAccount)')"
@@ -56,6 +64,8 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
   exit 0
 fi
 
+# 在 ${GOOGLE_PROJECT_ID} 新增 manual release Cloud Build trigger。
+# 在 ${GOOGLE_PROJECT_ID} 新增 manual release Cloud Build trigger。
 gcloud builds triggers create manual \
   --name="$TRIGGER_NAME" \
   --repository="$REPOSITORY_RESOURCE" \

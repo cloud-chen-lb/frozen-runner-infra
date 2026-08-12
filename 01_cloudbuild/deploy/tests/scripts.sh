@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：以 mock gcloud 驗證部署環境、IAM、trigger、輸入驗證與部署命令順序。
+# 流程：建立暫存環境與 mock gcloud，測試錯誤輸入不觸發 GCP，以及成功路徑的 substitutions。
+# 重要變數：ROOT_DIR、LOADER、PATH、各部署 mapping/VPC/runtime 變數；資源影響：只建立暫存檔與 log。
+# 安全/驗證限制：涵蓋 delimiter、秘密 key、帳號格式與 drift 檢查，但不執行真實部署或 smoke test。
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -267,6 +271,7 @@ if [[ "\$1 \$2 \$3" == "builds triggers describe" ]]; then
     *"--format=value(repositoryEventConfig.push.branch)"*) printf 'main\n' ;;
     *"--format=value(filename)"*) printf 'cicd/prod/cloudbuild-deploy.yaml\n' ;;
      *"--format=value(serviceAccount)"*) printf 'drift-account\n' ;;
+     *"--format=value(description)"*) printf '部署正式環境 app 與 migration 服務的 Cloud Build trigger。\n' ;;
      *"--format=value(substitutions._REGION)"*) printf 'asia-east1\n' ;;
     *) printf 'frozen-runner-production-deploy-trigger\n' ;;
   esac

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：驗證網路模組腳本的輸入檢查與 IAM role lifecycle。
+# 流程：以暫存 env/mock gcloud 執行測試，確認網路資源腳本在錯誤設定下停止且 role 權限一致。
+# 重要變數：ROOT_DIR、PATH 及模組 CIDR/region 設定；資源影響：只建立暫存測試檔，不修改 GCP。
+# 安全/驗證限制：mock 只檢查命令，不代表真實 VPC、peering 或 NAT API 已成功。
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"

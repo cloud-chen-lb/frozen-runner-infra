@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：驗證 Cloud SQL 模組的環境載入、輸入限制、instance/user 流程與 IAM lifecycle。
+# 流程：使用暫存環境與 mock gcloud，檢查錯誤設定在呼叫 GCP 前失敗及命令參數符合預期。
+# 重要變數：ROOT_DIR、LOADER、PATH、POSTGRES_*；資源影響：只建立暫存檔與測試 log。
+# 安全/驗證限制：不建立真實 Cloud SQL 或讀取真實密碼，無法取代實際資料庫連線驗證。
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"

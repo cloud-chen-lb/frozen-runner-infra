@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：載入秘密模組設定，驗證 Secret Manager mapping 與三個 service account ID。
+# 流程：載入全域/模組 env、保留全域專案值、驗證必要值後匯出設定。
+# 重要變數：APP_SECRET_MAPPING、MIGRATION_SECRET_MAPPING、APP/MIGRATION/DEPLOY_SERVICE_ACCOUNT_NAME。
+# 資源影響：只載入與驗證設定；本檔不建立秘密或讀取秘密值。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

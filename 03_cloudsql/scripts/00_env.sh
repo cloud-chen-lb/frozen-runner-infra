@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：載入 Cloud SQL 模組與全域環境，驗證 PostgreSQL instance/database/user 設定。
+# 流程：讀取 env、保留全域專案值並匯出 Cloud SQL 資源名稱。
+# 重要變數：POSTGRES_DATABASE_NAME、POSTGRES_APP_USER、POSTGRES_VERSION、POSTGRES_CPU、POSTGRES_STORAGE_GB。
+# 資源影響：只載入與驗證設定；缺少欄位會在建立 Cloud SQL 前停止。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

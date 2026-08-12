@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：載入 Cloud Build 基礎模組與全域環境，並驗證必要專案/IAM 設定。
+# 流程：依腳本位置尋找兩個 env 檔，保留全域值，再匯出 Cloud Build 連線資訊。
+# 重要變數：GLOBAL_ENV_FILE、BASE_ENV_FILE、PROJECT_NAME、GOOGLE_PROJECT_ID、EXEC_IAM_ACCOUNT。
+# 資源影響：只讀取並匯出環境，不建立或修改 GCP 資源；缺檔或空值會立即失敗。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

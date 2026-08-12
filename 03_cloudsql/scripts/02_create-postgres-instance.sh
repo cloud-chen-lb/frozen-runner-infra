@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# 用途：建立或驗證正式 PostgreSQL Cloud SQL instance。
+# 流程：驗證版本、規格、區域與私有網路；既有 instance 逐項比對合約，不存在才建立。
+# 重要變數：POSTGRES_VERSION/EDITION/CPU/MEMORY/STORAGE、POSTGRES_NETWORK_NAME、POSTGRES_INSTANCE_NAME。
+# 資源影響：建立 Cloud SQL instance，啟用區域 HA、備份、PITR、刪除保護並停用 public IP。
+# 安全/驗證限制：設定漂移時停止，不自動修改既有資料庫；建立需要相應 Cloud SQL 權限。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,9 +20,11 @@ if [[ ! "${POSTGRES_VERSION}" =~ ^POSTGRES_[0-9]+$ ]] ||
   exit 1
 fi
 
+# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 Cloud SQL instance，不修改資源。
 if gcloud sql instances describe "${POSTGRES_INSTANCE_NAME}" \
   --project="${GOOGLE_PROJECT_ID}" >/dev/null 2>&1; then
   describe_value() {
+    # 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 Cloud SQL instance 欄位，不修改資源。
     gcloud sql instances describe "${POSTGRES_INSTANCE_NAME}" \
       --project="${GOOGLE_PROJECT_ID}" --format="value($1)" 2>/dev/null
   }
@@ -49,6 +56,7 @@ if gcloud sql instances describe "${POSTGRES_INSTANCE_NAME}" \
     exit 1
   fi
 else
+  # 在 ${GOOGLE_PROJECT_ID} 新增 PostgreSQL Cloud SQL instance。
   gcloud sql instances create "${POSTGRES_INSTANCE_NAME}" \
     --project="${GOOGLE_PROJECT_ID}" \
     --database-version="${POSTGRES_VERSION}" \

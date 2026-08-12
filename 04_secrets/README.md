@@ -49,5 +49,5 @@ substitution 或 deployment script 傳入。
 bash 04_secrets/scripts/99_remove-exec-iam-account-role.sh
 ```
 
-這只撤銷 `MainAppProvisioningOperator` 的執行者 binding，不移除 runtime、
+這只撤銷 `SecretManagerProvisioningOperator` 的執行者 binding，不移除 runtime、
 migration、deploy service accounts 或它們的 runtime bindings。

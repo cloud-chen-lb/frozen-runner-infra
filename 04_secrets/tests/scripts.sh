@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# 用途：驗證 Secret Manager mapping、service account、IAM lifecycle 與輸入拒絕行為。
+# 流程：以暫存 env/mock gcloud 執行 invalid/valid mapping、drift、重複 key/name 與權限測試。
+# 重要變數：ROOT_DIR、LOADER、PATH、APP_SECRET_MAPPING/MIGRATION_SECRET_MAPPING；資源影響：只建立暫存檔與 mock log。
+# 安全/驗證限制：不建立真實 secret、不寫入 secret version，命令檢查無法取代 GCP IAM 實際驗證。
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -202,13 +206,15 @@ if [[ "\$1 \$2 \$3" == "iam roles describe" && -z "\${ROLE_EXISTS:-}" ]]; then e
 EOF
   chmod +x "${temp_dir}/gcloud"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/01_setup-exec-iam-account-role.sh"
-  create_permissions="$(grep -F 'iam roles create MainAppProvisioningOperator' "${log}")"
+  create_permissions="$(grep -F 'iam roles create SecretManagerProvisioningOperator' "${log}")"
   ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/01_setup-exec-iam-account-role.sh"
-  update_permissions="$(grep -F 'iam roles update MainAppProvisioningOperator' "${log}")"
+  update_permissions="$(grep -F 'iam roles update SecretManagerProvisioningOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/99_remove-exec-iam-account-role.sh"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
-  grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
-  grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
+  [[ "${create_permissions}" == *'secretmanager.versions.add'* ]]
+  [[ "${create_permissions}" != *'secretmanager.versions.access'* ]]
+  grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/SecretManagerProvisioningOperator' "${log}"
+  grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/SecretManagerProvisioningOperator' "${log}"
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
 }
 
@@ -339,4 +345,4 @@ test_secret_drift_fails
 test_invalid_secret_mapping_fails_before_gcloud
 test_cross_mapping_secret_name_fails_before_gcloud
 test_duplicate_key_mapping_fails_before_gcloud
-printf 'main-app scripts tests passed\n'
+printf 'secrets scripts tests passed\n'
