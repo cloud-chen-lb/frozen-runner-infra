@@ -7,5 +7,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
 ROLE_ID="CloudBuildSetupOperator"
+
+gcloud iam service-accounts remove-iam-policy-binding \
+  "cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+  --member="user:${EXEC_IAM_ACCOUNT}" \
+  --role="roles/iam.serviceAccountUser" \
+  --condition=None \
+  --project="${GOOGLE_PROJECT_ID}"
+
 # 從 ${GOOGLE_PROJECT_ID} 移除執行帳號的自訂 role binding，修改專案 IAM policy。
 gcloud projects remove-iam-policy-binding "${GOOGLE_PROJECT_ID}" --member="user:${EXEC_IAM_ACCOUNT}" --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"

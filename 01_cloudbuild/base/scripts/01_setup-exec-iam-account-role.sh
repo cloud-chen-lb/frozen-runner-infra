@@ -12,25 +12,7 @@ source "${SCRIPT_DIR}/00_env.sh"
 ROLE_ID="CloudBuildSetupOperator"
 ROLE_TITLE="Cloud Build 設定操作員"
 ROLE_DESCRIPTION="佈建及操作 Cloud Build 建置流程所需的權限"
-ROLE_PERMISSIONS="\
- cloudbuild.builds.create,\
- cloudbuild.connections.create,\
- cloudbuild.connections.get,\
- cloudbuild.repositories.create,\
- cloudbuild.repositories.get,\
- artifactregistry.dockerimages.get,\
- artifactregistry.repositories.create,\
- artifactregistry.repositories.get,\
- iam.roles.create,\
- iam.serviceAccounts.create,\
- iam.serviceAccounts.get,\
- iam.serviceAccounts.getIamPolicy,\
- iam.serviceAccounts.setIamPolicy,\
- resourcemanager.projects.get,\
- resourcemanager.projects.getIamPolicy,\
- resourcemanager.projects.setIamPolicy,\
- serviceusage.services.enable,\
- serviceusage.services.list"
+ROLE_PERMISSIONS="cloudbuild.builds.create,cloudbuild.connections.create,cloudbuild.connections.get,cloudbuild.repositories.create,cloudbuild.repositories.get,artifactregistry.dockerimages.get,artifactregistry.repositories.create,artifactregistry.repositories.get,iam.roles.create,iam.serviceAccounts.create,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.serviceAccounts.setIamPolicy,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,resourcemanager.projects.setIamPolicy,serviceusage.services.enable,serviceusage.services.list"
 
  # 查詢 ${GOOGLE_PROJECT_ID} 的自訂 role 狀態；deleted role 先恢復再更新。
   if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --format="value(deleted)" 2>/dev/null)"; then
@@ -58,6 +40,13 @@ fi
 gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
   --member="user:${EXEC_IAM_ACCOUNT}" \
   --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
+  --member="user:${EXEC_IAM_ACCOUNT}" \
+  --role="roles/iam.serviceAccountUser" \
+  --condition=None \
+  --project="${GOOGLE_PROJECT_ID}"
 
 printf 'Granted projects/%s/roles/%s to user:%s.\n' \
   "${GOOGLE_PROJECT_ID}" "${ROLE_ID}" "${EXEC_IAM_ACCOUNT}"

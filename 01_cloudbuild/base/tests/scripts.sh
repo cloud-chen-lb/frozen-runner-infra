@@ -60,7 +60,9 @@ EOF
   create_permissions="$(grep -F 'iam roles create CloudBuildSetupOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh"
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudBuildSetupOperator' "${log}"
+  grep -F 'iam service-accounts add-iam-policy-binding cb-share-build@echox-project.iam.gserviceaccount.com --member=user:cloud.chen@getoken.io --role=roles/iam.serviceAccountUser --condition=None --project=echox-project' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudBuildSetupOperator' "${log}"
+  grep -F 'iam service-accounts remove-iam-policy-binding cb-share-build@echox-project.iam.gserviceaccount.com --member=user:cloud.chen@getoken.io --role=roles/iam.serviceAccountUser --condition=None --project=echox-project' "${log}"
   ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh"
   update_permissions="$(grep -F 'iam roles update CloudBuildSetupOperator' "${log}")"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
