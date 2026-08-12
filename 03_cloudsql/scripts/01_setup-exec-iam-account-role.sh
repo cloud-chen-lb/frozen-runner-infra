@@ -10,8 +10,11 @@ ROLE_ID="CloudSQLProvisioningOperator"
 ROLE_TITLE="Cloud SQL 佈建操作員"
 ROLE_DESCRIPTION="佈建主應用程式 PostgreSQL 資料庫所需的權限"
 ROLE_PERMISSIONS="cloudsql.instances.create,cloudsql.instances.get,cloudsql.instances.list,cloudsql.instances.update,cloudsql.databases.create,cloudsql.databases.get,cloudsql.databases.list,cloudsql.users.create,cloudsql.users.get,cloudsql.users.list,cloudsql.users.update,serviceusage.services.enable,serviceusage.services.list,resourcemanager.projects.get"
-# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 Cloud SQL 自訂 role 是否存在，不修改資源。
-if gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" >/dev/null 2>&1; then
+# 查詢 ${GOOGLE_PROJECT_ID} 的 Cloud SQL 自訂 role 狀態；deleted role 先恢復再更新。
+if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --format="value(deleted)" 2>/dev/null)"; then
+  if [[ "${role_deleted}" == "True" ]]; then
+    gcloud iam roles undelete "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}"
+  fi
   # 更新 ${GOOGLE_PROJECT_ID} 的 Cloud SQL 自訂 role。
   gcloud iam roles update "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --title="${ROLE_TITLE}" --description="${ROLE_DESCRIPTION}" --stage="GA" --permissions="${ROLE_PERMISSIONS}"
 else

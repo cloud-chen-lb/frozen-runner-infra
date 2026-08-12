@@ -9,6 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
 
+# 唯讀查詢 ${GOOGLE_PROJECT_ID} Cloud SQL instance 的 private IP，不修改 instance、database、user 或密碼。
 if ! postgres_host="$(gcloud sql instances describe "${POSTGRES_INSTANCE_NAME}" \
   --project="${GOOGLE_PROJECT_ID}" \
   --format='value(ipAddresses[0].ipAddress)')"; then

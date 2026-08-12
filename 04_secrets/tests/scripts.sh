@@ -233,6 +233,8 @@ EOF
   grep -F 'iam service-accounts create cb-frozen-runner-mini' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-migration' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-deploy' "${log}"
+  grep -F 'iam service-accounts create cb-frozen-runner-deploy --display-name=frozen-runner production deploy' "${log}"
+  ! grep -F 'cb-frozen-runner-deploy --display-name=frozen-runner 正式環境部署' "${log}"
   grep -F 'projects add-iam-policy-binding echox-project --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/run.admin' "${log}"
   grep -F 'projects add-iam-policy-binding echox-project --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/artifactregistry.reader' "${log}"
   grep -F 'iam service-accounts add-iam-policy-binding cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com --member=serviceAccount:cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --role=roles/iam.serviceAccountUser' "${log}"
@@ -240,7 +242,7 @@ EOF
   ! grep -Eiq 'secretmanager.*admin|owner|editor|iam.serviceAccountKey|create.*key|\.json|password=|secret-value' "${log}"
 }
 
-test_service_account_drift_fails() {
+test_service_account_display_name_is_not_contract() {
   local temp_dir
   temp_dir="$(mktemp -d)"
   trap 'rm -rf "$temp_dir"' RETURN
@@ -248,16 +250,10 @@ test_service_account_drift_fails() {
 #!/usr/bin/env bash
 if [[ "$1 $2 $3" == "iam service-accounts describe" ]]; then
   printf 'wrong-display-name\n'
-  exit 0
 fi
-printf 'gcloud must not be called after drift\n' >&2
-exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/02_setup-service-accounts.sh"; then
-    printf 'Expected service account drift to fail\n' >&2
-    return 1
-  fi
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/02_setup-service-accounts.sh"
 }
 
 test_secrets_metadata_and_scoped_accessors() {
@@ -339,7 +335,7 @@ test_secret_mapping_contract
 test_dynamic_secret_mapping_is_created
 test_role_lifecycle_arguments
 test_service_accounts_and_deploy_iam
-test_service_account_drift_fails
+test_service_account_display_name_is_not_contract
 test_secrets_metadata_and_scoped_accessors
 test_secret_drift_fails
 test_invalid_secret_mapping_fails_before_gcloud

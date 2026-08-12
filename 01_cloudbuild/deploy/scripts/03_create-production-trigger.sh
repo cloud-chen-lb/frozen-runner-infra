@@ -16,7 +16,7 @@ done
 
 repository="projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_PROJECT_REGION}/connections/${CLOUD_BUILD_CONNECTION_NAME}/repositories/${CLOUD_BUILD_REPOSITORY_NAME}"
 service_account="projects/${GOOGLE_PROJECT_ID}/serviceAccounts/${DEPLOY_SERVICE_ACCOUNT_NAME}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
-TRIGGER_DESCRIPTION="部署正式環境 app 與 migration 服務的 Cloud Build trigger。"
+TRIGGER_DESCRIPTION="Cloud Build trigger for deploying production app and migration services."
 substitution_args="^;^_IMAGE_TAG=;_REGION=${GOOGLE_PROJECT_REGION};_REPOSITORY=${PROJECT_NAME}-container-repository;_APP_IMAGE=${PROJECT_NAME}-app;_MIGRATION_IMAGE=${PROJECT_NAME}-migration;_APP_SERVICE=${PROJECT_NAME}-main-app;_MIGRATION_JOB=${PROJECT_NAME}-db-migration;_DEPLOYER_SERVICE_ACCOUNT=${DEPLOY_SERVICE_ACCOUNT_NAME};_APP_SERVICE_ACCOUNT=${APP_SERVICE_ACCOUNT_NAME};_MIGRATOR_SERVICE_ACCOUNT=${MIGRATION_SERVICE_ACCOUNT_NAME};_APP_VPC_ARGS=${APP_VPC_ARGS};_MIGRATION_VPC_ARGS=${MIGRATION_VPC_ARGS};_APP_SECRET_MAPPING=${APP_SECRET_MAPPING};_MIGRATION_SECRET_MAPPING=${MIGRATION_SECRET_MAPPING};_APP_RUNTIME_ENV_VARS=${APP_RUNTIME_ENV_VARS};_MIGRATION_RUNTIME_ENV_VARS=${MIGRATION_RUNTIME_ENV_VARS}"
 
 # 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 production trigger 是否存在，不修改資源。
@@ -32,7 +32,6 @@ if gcloud builds triggers describe "${PRODUCTION_TRIGGER_NAME}" \
   [[ "$(get_trigger_value repositoryEventConfig.push.branch)" == "${CLOUD_BUILD_SOURCE_BRANCH}" ]] || drift=1
   [[ "$(get_trigger_value filename)" == 'cicd/prod/cloudbuild-deploy.yaml' ]] || drift=1
   [[ "$(get_trigger_value serviceAccount)" == "${service_account}" ]] || drift=1
-  [[ "$(get_trigger_value description)" == "${TRIGGER_DESCRIPTION}" ]] || drift=1
   for key in _IMAGE_TAG _REGION _REPOSITORY _APP_IMAGE _MIGRATION_IMAGE _APP_SERVICE _MIGRATION_JOB \
     _DEPLOYER_SERVICE_ACCOUNT _APP_SERVICE_ACCOUNT _MIGRATOR_SERVICE_ACCOUNT _APP_VPC_ARGS \
      _MIGRATION_VPC_ARGS _APP_SECRET_MAPPING _MIGRATION_SECRET_MAPPING _APP_RUNTIME_ENV_VARS _MIGRATION_RUNTIME_ENV_VARS; do

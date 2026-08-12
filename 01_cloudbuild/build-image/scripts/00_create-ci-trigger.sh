@@ -25,7 +25,7 @@ fi
 
 TRIGGER_NAME="${PROJECT_NAME}-ci-trigger"
 SOURCE_BRANCH="${CLOUD_BUILD_SOURCE_BRANCH:-master}"
-TRIGGER_DESCRIPTION="驗證以 master 為目標分支的 Pull Request，使用正式環境 CI Cloud Build 設定。"
+TRIGGER_DESCRIPTION="Validate Pull Requests targeting master with the production CI Cloud Build configuration."
 
 escape_re2() {
   local value="$1"
@@ -65,15 +65,11 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
   EXISTING_SERVICE_ACCOUNT="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(serviceAccount)')"
   # 唯讀查詢既有 CI trigger 的區域，不修改資源。
   EXISTING_REGION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(location)')"
-  # 唯讀查詢既有 CI trigger 的說明，不修改資源。
-  EXISTING_DESCRIPTION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(description)')"
-
   if [[ "$EXISTING_REPOSITORY" != "$REPOSITORY_RESOURCE" ||
     "$EXISTING_BRANCH_PATTERN" != "^${SOURCE_BRANCH_PATTERN}$" ||
     "$EXISTING_BUILD_CONFIG" != 'cicd/prod/cloudbuild-ci.yaml' ||
     "$EXISTING_SERVICE_ACCOUNT" != "$SERVICE_ACCOUNT" ||
-    "$EXISTING_REGION" != "$GOOGLE_PROJECT_REGION" ||
-    "$EXISTING_DESCRIPTION" != "$TRIGGER_DESCRIPTION" ]]; then
+    "$EXISTING_REGION" != "$GOOGLE_PROJECT_REGION" ]]; then
     printf 'CI trigger drift detected: %s\n' "$TRIGGER_NAME" >&2
     exit 1
   fi

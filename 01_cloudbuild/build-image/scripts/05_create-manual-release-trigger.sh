@@ -28,7 +28,7 @@ APP_IMAGE="${PROJECT_NAME}-app"
 MIGRATION_IMAGE="${PROJECT_NAME}-migration"
 TRIGGER_NAME="${PROJECT_NAME}-manual-release-build-trigger"
 SOURCE_BRANCH="${CLOUD_BUILD_SOURCE_BRANCH:-master}"
-TRIGGER_DESCRIPTION="從設定的來源分支手動建置並發布正式環境的 app 與 migration 映像檔。"
+TRIGGER_DESCRIPTION="Manually build and publish production app and migration images from the configured source branch."
 REPOSITORY_RESOURCE="projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_PROJECT_REGION}/connections/${CLOUD_BUILD_CONNECTION_NAME}/repositories/${CLOUD_BUILD_REPOSITORY_NAME}"
 SERVICE_ACCOUNT="projects/${GOOGLE_PROJECT_ID}/serviceAccounts/cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -43,7 +43,6 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
   EXISTING_BUILD_CONFIG="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(filename)')"
   EXISTING_SERVICE_ACCOUNT="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(serviceAccount)')"
   EXISTING_REGION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(substitutions._REGION)')"
-  EXISTING_DESCRIPTION="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(description)')"
   EXISTING_REPOSITORY_NAME="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(substitutions._REPOSITORY)')"
   EXISTING_APP_IMAGE="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(substitutions._APP_IMAGE)')"
   EXISTING_MIGRATION_IMAGE="$(gcloud builds triggers describe "$TRIGGER_NAME" --region="$GOOGLE_PROJECT_REGION" --project="$GOOGLE_PROJECT_ID" --format='value(substitutions._MIGRATION_IMAGE)')"
@@ -55,8 +54,7 @@ if gcloud builds triggers describe "$TRIGGER_NAME" \
     "$EXISTING_REGION" != "$GOOGLE_PROJECT_REGION" ||
     "$EXISTING_REPOSITORY_NAME" != "$REPOSITORY_NAME" ||
     "$EXISTING_APP_IMAGE" != "$APP_IMAGE" ||
-    "$EXISTING_MIGRATION_IMAGE" != "$MIGRATION_IMAGE" ||
-    "$EXISTING_DESCRIPTION" != "$TRIGGER_DESCRIPTION" ]]; then
+    "$EXISTING_MIGRATION_IMAGE" != "$MIGRATION_IMAGE" ]]; then
     printf 'Manual release trigger drift detected: %s\n' "$TRIGGER_NAME" >&2
     exit 1
   fi

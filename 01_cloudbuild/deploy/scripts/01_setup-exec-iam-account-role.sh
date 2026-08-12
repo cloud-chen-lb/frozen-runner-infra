@@ -9,9 +9,12 @@ source "${SCRIPT_DIR}/00_env.sh"
 ROLE_ID="CloudBuildDeployProvisioningOperator"
 ROLE_TITLE="Cloud Build 部署佈建操作員"
 ROLE_DESCRIPTION="佈建正式環境部署流程所需的權限"
-ROLE_PERMISSIONS="cloudbuild.builds.create,cloudbuild.triggers.create,cloudbuild.triggers.get,cloudbuild.triggers.list,cloudbuild.triggers.update,run.services.get,run.services.list,run.services.update,run.jobs.get,run.jobs.list,run.jobs.update,artifactregistry.repositories.get,artifactregistry.repositories.list,artifactregistry.dockerimages.get,artifactregistry.dockerimages.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.serviceAccounts.setIamPolicy,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,resourcemanager.projects.setIamPolicy"
-# 唯讀查詢 ${GOOGLE_PROJECT_ID} 的部署自訂 role 是否存在，不修改資源。
-if gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" >/dev/null 2>&1; then
+ROLE_PERMISSIONS="cloudbuild.builds.create,cloudbuild.builds.get,cloudbuild.builds.list,cloudbuild.builds.update,run.services.get,run.services.list,run.services.update,run.jobs.get,run.jobs.list,run.jobs.update,artifactregistry.repositories.get,artifactregistry.repositories.list,artifactregistry.dockerimages.get,artifactregistry.dockerimages.list,iam.serviceAccounts.get,iam.serviceAccounts.getIamPolicy,iam.serviceAccounts.setIamPolicy,resourcemanager.projects.get,resourcemanager.projects.getIamPolicy,resourcemanager.projects.setIamPolicy"
+# 查詢 ${GOOGLE_PROJECT_ID} 的部署自訂 role 狀態；deleted role 先恢復再更新。
+if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --format="value(deleted)" 2>/dev/null)"; then
+  if [[ "${role_deleted}" == "True" ]]; then
+    gcloud iam roles undelete "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}"
+  fi
   # 更新 ${GOOGLE_PROJECT_ID} 的部署自訂 role。
   gcloud iam roles update "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --title="${ROLE_TITLE}" --description="${ROLE_DESCRIPTION}" --stage="GA" --permissions="${ROLE_PERMISSIONS}"
 else

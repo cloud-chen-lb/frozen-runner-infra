@@ -7,8 +7,50 @@
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
 
-# 在 ${GOOGLE_PROJECT_ID} 新增 co-signer 自訂 IAM role。
-gcloud iam roles create "${ROLE_ID}" \
+# 查詢 ${GOOGLE_PROJECT_ID} 的 co-signer role 狀態；deleted role 先恢復再更新。
+if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}" --format="value(deleted)" 2>/dev/null)"; then
+  if [[ "${role_deleted}" == "True" ]]; then
+    gcloud iam roles undelete "${ROLE_ID}" --project="${GOOGLE_PROJECT_ID}"
+  fi
+  gcloud iam roles update "${ROLE_ID}" \
+    --project="${GOOGLE_PROJECT_ID}" \
+    --title="${ROLE_TITLE}" \
+    --description="${ROLE_DESCRIPTION}" \
+    --stage="GA" \
+    --permissions="\
+ cloudkms.keyRings.create,\
+ cloudkms.keyRings.get,\
+ cloudkms.keyRings.list,\
+ cloudkms.cryptoKeys.create,\
+ cloudkms.cryptoKeys.get,\
+ cloudkms.cryptoKeys.list,\
+ cloudkms.cryptoKeys.getIamPolicy,\
+ cloudkms.cryptoKeys.setIamPolicy,\
+ iam.serviceAccounts.create,\
+ iam.serviceAccounts.actAs,\
+ iam.serviceAccounts.get,\
+ iam.serviceAccounts.list,\
+ compute.instances.create,\
+ compute.instances.get,\
+ compute.instances.list,\
+ compute.instances.setMetadata,\
+ compute.instances.setServiceAccount,\
+ compute.disks.create,\
+ compute.addresses.create,\
+ compute.addresses.get,\
+ compute.addresses.use,\
+ compute.subnetworks.use,\
+ compute.subnetworks.useExternalIp,\
+ cloudsql.instances.create,\
+ cloudsql.instances.get,\
+ cloudsql.instances.list,\
+ cloudsql.databases.create,\
+ cloudsql.databases.get,\
+ cloudsql.databases.list,\
+ resourcemanager.projects.get"
+else
+  # 在 ${GOOGLE_PROJECT_ID} 新增 co-signer 自訂 IAM role。
+  gcloud iam roles create "${ROLE_ID}" \
   --project="${GOOGLE_PROJECT_ID}" \
   --title="${ROLE_TITLE}" \
   --description="${ROLE_DESCRIPTION}" \
@@ -43,7 +85,8 @@ cloudsql.instances.list,\
 cloudsql.databases.create,\
 cloudsql.databases.get,\
 cloudsql.databases.list,\
-resourcemanager.projects.get"
+  resourcemanager.projects.get"
+fi
 
 # 授權執行帳號使用 ${GOOGLE_PROJECT_ID} 的 co-signer role，修改專案 IAM policy。
 gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \

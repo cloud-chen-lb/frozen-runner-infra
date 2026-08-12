@@ -143,6 +143,8 @@ EOF
   chmod +x "${temp_dir}/gcloud"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh"
   create_permissions="$(grep -F 'iam roles create CloudBuildDeployProvisioningOperator' "${log}")"
+  ! grep -F -- 'artifactregistry.repositories.getIamPolicy' <<<"${create_permissions}"
+  ! grep -F -- 'artifactregistry.repositories.setIamPolicy' <<<"${create_permissions}"
   ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh"
   update_permissions="$(grep -F 'iam roles update CloudBuildDeployProvisioningOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh"
@@ -271,7 +273,6 @@ if [[ "\$1 \$2 \$3" == "builds triggers describe" ]]; then
     *"--format=value(repositoryEventConfig.push.branch)"*) printf 'main\n' ;;
     *"--format=value(filename)"*) printf 'cicd/prod/cloudbuild-deploy.yaml\n' ;;
      *"--format=value(serviceAccount)"*) printf 'drift-account\n' ;;
-     *"--format=value(description)"*) printf '部署正式環境 app 與 migration 服務的 Cloud Build trigger。\n' ;;
      *"--format=value(substitutions._REGION)"*) printf 'asia-east1\n' ;;
     *) printf 'frozen-runner-production-deploy-trigger\n' ;;
   esac
