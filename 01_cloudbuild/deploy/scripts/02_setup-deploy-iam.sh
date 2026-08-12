@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 用途：建立正式部署 service account 並授予執行 Cloud Run/讀取映像/模擬 runtime 帳號的權限。
-# 流程：驗證 deploy 帳號名稱，建立或檢查後套用三類 IAM binding。
+# 用途：建立正式部署 service account 並授予執行 Cloud Run/寫入 Cloud Logging/讀取映像/模擬 runtime 帳號的權限。
+# 流程：驗證 deploy 帳號名稱，建立或檢查後套用專案與 service account IAM binding。
 # 重要變數：DEPLOY_SERVICE_ACCOUNT_NAME、APP_SERVICE_ACCOUNT_NAME、MIGRATION_SERVICE_ACCOUNT_NAME。
 # 資源影響：建立 service account、修改專案/registry/帳號 IAM。
 set -euo pipefail
@@ -24,8 +24,13 @@ if ! gcloud iam service-accounts describe "${deploy_email}" \
 fi
 
 # 授權 deploy service account 在 ${GOOGLE_PROJECT_ID} 管理 Cloud Run，修改專案 IAM policy。
-gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
-  --member="serviceAccount:${deploy_email}" --role="roles/run.admin" --condition=None
+for role in roles/run.admin roles/logging.logWriter; do
+  gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
+    --member="serviceAccount:${deploy_email}" --role="${role}" --condition=None
+done
+gcloud iam service-accounts add-iam-policy-binding "${deploy_email}" \
+  --member="user:${EXEC_IAM_ACCOUNT}" \
+  --role="roles/iam.serviceAccountUser" --condition=None --project="${GOOGLE_PROJECT_ID}"
 for runtime_name in "${APP_SERVICE_ACCOUNT_NAME}" "${MIGRATION_SERVICE_ACCOUNT_NAME}"; do
   # 授權 deploy service account 模擬 runtime service account，修改 ${GOOGLE_PROJECT_ID} 的帳號 IAM policy。
   gcloud iam service-accounts add-iam-policy-binding \

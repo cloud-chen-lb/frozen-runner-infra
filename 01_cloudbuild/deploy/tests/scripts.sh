@@ -148,6 +148,7 @@ EOF
   ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh"
   update_permissions="$(grep -F 'iam roles update CloudBuildDeployProvisioningOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh"
+  grep -F 'iam service-accounts remove-iam-policy-binding cb-frozen-runner-deploy@echox-project.iam.gserviceaccount.com --member=user:cloud.chen@getoken.io --role=roles/iam.serviceAccountUser --condition=None --project=echox-project' "${log}"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudBuildDeployProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudBuildDeployProvisioningOperator' "${log}"
@@ -358,6 +359,33 @@ test_deploy_yaml_migrates_before_app() {
   grep -F 'gcloud run jobs execute' "${yaml}"
 }
 
+test_deploy_yaml_resource_and_load_balancer_contract() {
+  local yaml
+  yaml="${ROOT_DIR}/../frozen-runner/cicd/prod/cloudbuild-deploy.yaml"
+  for substitution in _APP_LOAD_BALANCER_URL _APP_MIN_INSTANCE _APP_MAX_INSTANCE _APP_CPU \
+    _APP_MEMORY _APP_TIMEOUT _APP_CONCURRENCY; do
+    grep -F "  ${substitution}: \"\"" "${yaml}"
+  done
+  grep -F 'app_ingress_args=(--default-url --ingress=all)' "${yaml}"
+  grep -F 'app_ingress_args=(--no-default-url --ingress=internal-and-cloud-load-balancing)' "${yaml}"
+  for flag in min max cpu memory timeout concurrency; do
+    grep -F "app_resource_args+=(--${flag}" "${yaml}"
+  done
+  grep -F 'curl --fail --silent --show-error --max-time 15 "${_APP_LOAD_BALANCER_URL}"' "${yaml}"
+  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/01_cloudbuild/deploy/scripts/04_run-production-deploy.sh"
+  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/01_cloudbuild/deploy/scripts/03_create-production-trigger.sh"
+}
+
+test_deploy_yaml_settings_are_independent() {
+  local yaml
+  yaml="${ROOT_DIR}/../frozen-runner/cicd/prod/cloudbuild-deploy.yaml"
+  for setting in MIN_INSTANCE MAX_INSTANCE CPU MEMORY TIMEOUT CONCURRENCY; do
+    grep -F "\${_APP_${setting}}" "${yaml}"
+  done
+  grep -F '[[ -z "${_APP_MIN_INSTANCE}" ]] || app_resource_args+=(--min' "${yaml}"
+  grep -F '[[ -z "${_APP_MAX_INSTANCE}" ]] || app_resource_args+=(--max' "${yaml}"
+}
+
 test_verify_does_not_smoke_without_explicit_url() {
   local temp_dir log
   temp_dir="$(mktemp -d)"
@@ -392,5 +420,7 @@ test_service_account_contract
 test_trigger_substitution_contract
 test_trigger_does_not_load_main_app_mappings
 test_deploy_yaml_migrates_before_app
+test_deploy_yaml_resource_and_load_balancer_contract
+test_deploy_yaml_settings_are_independent
 test_verify_does_not_smoke_without_explicit_url
 printf 'cloudbuild deploy scripts tests passed\n'

@@ -8,6 +8,11 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
+deploy_email="${DEPLOY_SERVICE_ACCOUNT_NAME}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
 ROLE_ID="CloudBuildDeployProvisioningOperator"
+# 從 deploy service account 移除執行帳號的 serviceAccountUser binding，修改帳號 IAM policy。
+gcloud iam service-accounts remove-iam-policy-binding "${deploy_email}" \
+  --member="user:${EXEC_IAM_ACCOUNT}" --role="roles/iam.serviceAccountUser" \
+  --condition=None --project="${GOOGLE_PROJECT_ID}"
 # 從 ${GOOGLE_PROJECT_ID} 移除執行帳號的部署 role binding，修改專案 IAM policy。
 gcloud projects remove-iam-policy-binding "${GOOGLE_PROJECT_ID}" --member="user:${EXEC_IAM_ACCOUNT}" --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"

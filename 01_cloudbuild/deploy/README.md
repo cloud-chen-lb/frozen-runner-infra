@@ -16,12 +16,14 @@ provisioning。GCP target 為 `global-env/env.sh` 的 `GOOGLE_PROJECT_ID`。
 - `MIGRATION_SECRET_MAPPING`
 - `APP_RUNTIME_ENV_VARS`
 - `MIGRATION_RUNTIME_ENV_VARS`
+- `APP_MIN_INSTANCE`, `APP_MAX_INSTANCE`, `APP_CPU`, `APP_MEMORY`, `APP_TIMEOUT`, `APP_CONCURRENCY` (optional; empty uses source YAML/Cloud Run defaults)
 - `PRODUCTION_TRIGGER_NAME`
 - `PRODUCTION_APP_NAME`
 - `PRODUCTION_MIGRATION_JOB_NAME`
 
-`DEPLOY_SMOKE_TEST_URL` 可留空；只有明確設定既有 Load Balancer URL 才會做
-smoke test。上述四組 defaults 與 `cicd/prod/cloudbuild-deploy.yaml` 一致，
+`DEPLOY_SMOKE_TEST_URL` 可留空；只有明確設定既有驗證 URL 才會做
+smoke test。資源 overrides 留空時由 source repo 的
+`cicd/prod/cloudbuild-deploy.yaml` 決定 defaults，
 不從 main-app env 載入。mapping 只含 Secret Manager metadata，不含 secret value。
 
 ## 建立與執行
