@@ -51,13 +51,13 @@
 - `03_cloudsql/scripts/03_create-postgres-database-users.sh`
 - `03_cloudsql/scripts/99_remove-exec-iam-account-role.sh`
 - `03_cloudsql/tests/scripts.sh`
-- `04_main-app/scripts/env/env.sh`
-- `04_main-app/scripts/00_env.sh`
-- `04_main-app/scripts/01_setup-exec-iam-account-role.sh`
-- `04_main-app/scripts/02_setup-service-accounts.sh`
-- `04_main-app/scripts/03_setup-secrets.sh`
-- `04_main-app/scripts/99_remove-exec-iam-account-role.sh`
-- `04_main-app/tests/scripts.sh`
+- `04_secrets/scripts/env/env.sh`
+- `04_secrets/scripts/00_env.sh`
+- `04_secrets/scripts/01_setup-exec-iam-account-role.sh`
+- `04_secrets/scripts/02_setup-service-accounts.sh`
+- `04_secrets/scripts/03_setup-secrets.sh`
+- `04_secrets/scripts/99_remove-exec-iam-account-role.sh`
+- `04_secrets/tests/scripts.sh`
 - `01_cloudbuild/deploy/scripts/env/env.sh`
 - `01_cloudbuild/deploy/scripts/00_env.sh`
 - `01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh`
@@ -78,10 +78,10 @@
 
 - Create: `02_network/scripts/env/env.sh`, `02_network/scripts/00_env.sh`
 - Create: `03_cloudsql/scripts/env/env.sh`, `03_cloudsql/scripts/00_env.sh`
-- Create: `04_main-app/scripts/env/env.sh`, `04_main-app/scripts/00_env.sh`
+- Create: `04_secrets/scripts/env/env.sh`, `04_secrets/scripts/00_env.sh`
 - Create: `01_cloudbuild/deploy/scripts/env/env.sh`, `01_cloudbuild/deploy/scripts/00_env.sh`
 - Modify: `01_cloudbuild/base/scripts/00_env.sh`
-- Test: `02_network/tests/scripts.sh`, `03_cloudsql/tests/scripts.sh`, `04_main-app/tests/scripts.sh`, `01_cloudbuild/deploy/tests/scripts.sh`
+- Test: `02_network/tests/scripts.sh`, `03_cloudsql/tests/scripts.sh`, `04_secrets/tests/scripts.sh`, `01_cloudbuild/deploy/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -113,7 +113,7 @@
 - Modify: `01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh`
 - Create: `02_network/scripts/01_setup-exec-iam-account-role.sh`, `02_network/scripts/99_remove-exec-iam-account-role.sh`
 - Create: `03_cloudsql/scripts/01_setup-exec-iam-account-role.sh`, `03_cloudsql/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `04_main-app/scripts/01_setup-exec-iam-account-role.sh`, `04_main-app/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `04_secrets/scripts/01_setup-exec-iam-account-role.sh`, `04_secrets/scripts/99_remove-exec-iam-account-role.sh`
 - Create: `01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh`, `01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh`
 - Create: `01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh`
 - Create: `05_co-signer/scripts/99_remove-exec-iam-account-role.sh`
@@ -231,9 +231,9 @@
 
 **Files:**
 
-- Create: `04_main-app/scripts/02_setup-service-accounts.sh`
-- Create: `04_main-app/scripts/03_setup-secrets.sh`
-- Modify: `04_main-app/tests/scripts.sh`
+- Create: `04_secrets/scripts/02_setup-service-accounts.sh`
+- Create: `04_secrets/scripts/03_setup-secrets.sh`
+- Modify: `04_secrets/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -262,7 +262,7 @@
 
 - [x] **Step 6: Run verification**
 
-  Run `bash 04_main-app/tests/scripts.sh`, `bash -n 04_main-app/scripts/*.sh`, and `git diff --check`.
+  Run `bash 04_secrets/tests/scripts.sh`, `bash -n 04_secrets/scripts/*.sh`, and `git diff --check`.
 
 ---
 
@@ -319,7 +319,7 @@
 - Modify: `README.md`
 - Create: `02_network/README.md`
 - Create: `03_cloudsql/README.md`
-- Create: `04_main-app/README.md`
+- Create: `04_secrets/README.md`
 - Create: `01_cloudbuild/deploy/README.md`
 
 - [x] **Step 1: Document module order**
@@ -336,7 +336,7 @@
 
 - [x] **Step 4: Run full local checks**
 
-  Run `bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_main-app/scripts/*.sh 01_cloudbuild/deploy/scripts/*.sh`, all module test scripts, and `git diff --check` in both repositories.
+  Run `bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_secrets/scripts/*.sh 01_cloudbuild/deploy/scripts/*.sh`, all module test scripts, and `git diff --check` in both repositories.
 
 - [x] **Step 5: Review external-operation boundary**
 

@@ -41,7 +41,7 @@ frozen-runner-infra/
 │   └── scripts/
 ├── 03_cloudsql/
 │   └── scripts/
-├── 04_main-app/
+├── 04_secrets/
 │   └── scripts/
 └── 01_cloudbuild/
     └── deploy/

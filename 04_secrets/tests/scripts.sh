@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-LOADER="${ROOT_DIR}/04_main-app/scripts/00_env.sh"
+LOADER="${ROOT_DIR}/04_secrets/scripts/00_env.sh"
 
 test_invalid_env_fails_before_gcloud() {
   local temp_dir gcloud_calls
@@ -17,8 +17,8 @@ GOOGLE_PROJECT_REGION=asia-east1
 EXEC_IAM_ACCOUNT=
 EOF
   cat >"${temp_dir}/module-env.sh" <<'EOF'
-APP_SECRET_MAPPING=APP_SECRET=frozen-runner-main-app-secret:latest
-MIGRATION_SECRET_MAPPING=DATABASE_URL=frozen-runner-database-url:latest
+APP_SECRET_MAPPING=APP_SECRET=bad:latest
+MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=frozen-runner-migration-database-url:latest
 EOF
   cat >"${temp_dir}/gcloud" <<EOF
 #!/usr/bin/env bash
@@ -41,8 +41,8 @@ test_missing_accessor_fails_before_gcloud() {
   gcloud_calls="${temp_dir}/gcloud.calls"
   trap 'rm -rf "$temp_dir"' RETURN
   cat >"${temp_dir}/module-env.sh" <<'EOF'
-APP_SECRET_MAPPING='APP_SECRET=frozen-runner-main-app-secret:latest'
-MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+APP_SECRET_MAPPING='APP_SECRET=bad:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-migration-database-url:latest'
 APP_SERVICE_ACCOUNT_NAME=
 MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
 DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
@@ -54,7 +54,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
     printf 'Expected missing accessor to fail\n' >&2
     return 1
   fi
@@ -67,8 +67,8 @@ test_invalid_accessor_fails_before_gcloud() {
   gcloud_calls="${temp_dir}/gcloud.calls"
   trap 'rm -rf "$temp_dir"' RETURN
   cat >"${temp_dir}/module-env.sh" <<'EOF'
-APP_SECRET_MAPPING='APP_SECRET=frozen-runner-main-app-secret:latest'
-MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+APP_SECRET_MAPPING='APP_SECRET=bad:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-migration-database-url:latest'
 APP_SERVICE_ACCOUNT_NAME='cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com'
 MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
 DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
@@ -80,7 +80,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
     printf 'Expected invalid accessor to fail\n' >&2
     return 1
   fi
@@ -98,6 +98,98 @@ test_valid_env_can_be_sourced() {
   )
 }
 
+test_secret_mapping_contract() {
+  source "${LOADER}"
+  [[ "${APP_SECRET_MAPPING}" == *'APP_INTERNAL_ADMIN_PASSWORD='* ]]
+  [[ "${APP_SECRET_MAPPING}" == *'APP_ALERT_API_BEARER_TOKEN='* ]]
+  [[ "${APP_SECRET_MAPPING}" == *'APP_DATA_ENCRYPTION_SECRET='* ]]
+  [[ "${APP_SECRET_MAPPING}" == *'APP_DATABASE_URL='* ]]
+  [[ "${APP_SECRET_MAPPING}" == *'APP_MAILGUN_API_KEY='* ]]
+  [[ "${APP_SECRET_MAPPING}" != *'APP_SECRET='* ]]
+  [[ "${MIGRATION_SECRET_MAPPING}" == "APP_DATABASE_URL=frozen-runner-migration-database-url:latest" ]]
+  [[ "${MIGRATION_SECRET_MAPPING}" != 'DATABASE_URL='* ]]
+  [[ "${MIGRATION_SECRET_MAPPING}" != *',DATABASE_URL='* ]]
+  [[ "${MIGRATION_SECRET_MAPPING}" != 'DATABASE_USER='* ]]
+  [[ "${MIGRATION_SECRET_MAPPING}" != *',DATABASE_USER='* ]]
+  [[ "${APP_SECRET_MAPPING}" != *'frozen-runner-migration-database-url'* ]]
+}
+
+test_dynamic_secret_mapping_is_created() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_INTERNAL_ADMIN_PASSWORD=frozen-runner-app-internal-admin-password:latest,APP_NEW_RUNTIME_SECRET=frozen-runner-app-new-runtime-secret:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-migration-database-url:latest'
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2" == "secrets describe" ]]; then exit 1; fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"
+  grep -F 'secrets create frozen-runner-app-new-runtime-secret --replication-policy=automatic' "${log}"
+  grep -F 'secrets add-iam-policy-binding frozen-runner-app-new-runtime-secret --member=serviceAccount:cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com' "${log}"
+}
+
+test_cross_mapping_secret_name_fails_before_gcloud() {
+  local temp_dir gcloud_calls
+  temp_dir="$(mktemp -d)"
+  gcloud_calls="${temp_dir}/gcloud.calls"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_FIRST_SECRET=frozen-runner-duplicate-secret:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-duplicate-secret:latest'
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${gcloud_calls}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
+    printf 'Expected app/migration secret name reuse to fail\n' >&2
+    return 1
+  fi
+  [[ ! -s "${gcloud_calls}" ]]
+}
+
+test_duplicate_key_mapping_fails_before_gcloud() {
+  local temp_dir gcloud_calls
+  temp_dir="$(mktemp -d)"
+  gcloud_calls="${temp_dir}/gcloud.calls"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/module-env.sh" <<'EOF'
+APP_SECRET_MAPPING='APP_DUPLICATE_SECRET=frozen-runner-first-secret:latest,APP_DUPLICATE_SECRET=frozen-runner-second-secret:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-migration-database-url:latest'
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
+EOF
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${gcloud_calls}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
+    printf 'Expected duplicate secret key to fail\n' >&2
+    return 1
+  fi
+  [[ ! -s "${gcloud_calls}" ]]
+}
+
 test_role_lifecycle_arguments() {
   local temp_dir log
   temp_dir="$(mktemp -d)"
@@ -109,11 +201,11 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "iam roles describe" && -z "\${ROLE_EXISTS:-}" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/01_setup-exec-iam-account-role.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/01_setup-exec-iam-account-role.sh"
   create_permissions="$(grep -F 'iam roles create MainAppProvisioningOperator' "${log}")"
-  ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/01_setup-exec-iam-account-role.sh"
+  ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/01_setup-exec-iam-account-role.sh"
   update_permissions="$(grep -F 'iam roles update MainAppProvisioningOperator' "${log}")"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/99_remove-exec-iam-account-role.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/99_remove-exec-iam-account-role.sh"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
@@ -131,7 +223,7 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "iam service-accounts describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/02_setup-service-accounts.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/02_setup-service-accounts.sh"
   grep -F 'iam service-accounts create cb-frozen-runner-mini' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-migration' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-deploy' "${log}"
@@ -156,14 +248,14 @@ printf 'gcloud must not be called after drift\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/02_setup-service-accounts.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/02_setup-service-accounts.sh"; then
     printf 'Expected service account drift to fail\n' >&2
     return 1
   fi
 }
 
 test_secrets_metadata_and_scoped_accessors() {
-  local temp_dir log
+  local temp_dir log item key secret_name
   temp_dir="$(mktemp -d)"
   log="${temp_dir}/gcloud.log"
   trap 'rm -rf "$temp_dir"' RETURN
@@ -173,13 +265,18 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2" == "secrets describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"
-  grep -F 'secrets create frozen-runner-main-app-secret --replication-policy=automatic' "${log}"
-  grep -F 'secrets create frozen-runner-database-url --replication-policy=automatic' "${log}"
-  grep -F 'secrets create frozen-runner-database-user --replication-policy=automatic' "${log}"
-  grep -F 'secrets add-iam-policy-binding frozen-runner-main-app-secret --member=serviceAccount:cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
-  grep -F 'secrets add-iam-policy-binding frozen-runner-database-url --member=serviceAccount:cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
-  grep -F 'secrets add-iam-policy-binding frozen-runner-database-user --member=serviceAccount:cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor' "${log}"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"
+  IFS=',' read -r -a app_items <<<"${APP_SECRET_MAPPING}"
+  for item in "${app_items[@]}"; do
+    secret_name="${item#*=}"
+    secret_name="${secret_name%:*}"
+    grep -F "secrets create ${secret_name} --replication-policy=automatic" "${log}"
+    grep -F "secrets add-iam-policy-binding ${secret_name} --member=serviceAccount:cb-frozen-runner-mini@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor" "${log}"
+  done
+  secret_name="${MIGRATION_SECRET_MAPPING#*=}"
+  secret_name="${secret_name%:*}"
+  grep -F "secrets create ${secret_name} --replication-policy=automatic" "${log}"
+  grep -F "secrets add-iam-policy-binding ${secret_name} --member=serviceAccount:cb-frozen-runner-migration@echox-project.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor" "${log}"
   ! grep -Eiq 'versions add|secret-value|password|private[_-]?key|\.json' "${log}"
 }
 
@@ -197,7 +294,7 @@ printf 'gcloud must not be called after secret drift\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
     printf 'Expected secret replication drift to fail\n' >&2
     return 1
   fi
@@ -209,7 +306,7 @@ test_invalid_secret_mapping_fails_before_gcloud() {
   trap 'rm -rf "$temp_dir"' RETURN
 cat >"${temp_dir}/module-env.sh" <<'EOF'
 APP_SECRET_MAPPING='APP_SECRET=bad value:latest'
-MIGRATION_SECRET_MAPPING='DATABASE_URL=frozen-runner-database-url:latest'
+MIGRATION_SECRET_MAPPING='APP_DATABASE_URL=frozen-runner-migration-database-url:latest'
 APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
 MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
 DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
@@ -221,7 +318,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/04_main-app/scripts/03_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/04_secrets/scripts/03_setup-secrets.sh"; then
     printf 'Expected invalid secret mapping to fail\n' >&2
     return 1
   fi
@@ -232,10 +329,14 @@ test_missing_accessor_fails_before_gcloud
 test_invalid_accessor_fails_before_gcloud
 test_valid_env_loads
 test_valid_env_can_be_sourced
+test_secret_mapping_contract
+test_dynamic_secret_mapping_is_created
 test_role_lifecycle_arguments
 test_service_accounts_and_deploy_iam
 test_service_account_drift_fails
 test_secrets_metadata_and_scoped_accessors
 test_secret_drift_fails
 test_invalid_secret_mapping_fails_before_gcloud
+test_cross_mapping_secret_name_fails_before_gcloud
+test_duplicate_key_mapping_fails_before_gcloud
 printf 'main-app scripts tests passed\n'

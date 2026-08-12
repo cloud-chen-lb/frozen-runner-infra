@@ -1,9 +1,18 @@
 # PostgreSQL configuration. Passwords are supplied outside repository files.
-POSTGRES_DATABASE_NAME="frozen_runner"
-POSTGRES_APP_USER="frozen_runner_app"
-POSTGRES_MIGRATION_USER="frozen_runner_migration"
+POSTGRES_IDENTIFIER_PREFIX="${PROJECT_NAME//-/_}"
+POSTGRES_DATABASE_NAME="${POSTGRES_IDENTIFIER_PREFIX}"
+POSTGRES_APP_USER="${POSTGRES_IDENTIFIER_PREFIX}_app"
+POSTGRES_MIGRATION_USER="${POSTGRES_IDENTIFIER_PREFIX}_migration"
 POSTGRES_VERSION="POSTGRES_16"
-POSTGRES_TIER="db-custom-2-7680"
+
+# Cloud SQL Enterprise edition 規格。
+# CPU 是 vCPU 數量；memory 單位為 MB，需符合 Cloud SQL custom machine type 規則。
+# 例如 2 vCPU / 7,680 MB 會對應 db-custom-2-7680。
+POSTGRES_EDITION="ENTERPRISE"
+POSTGRES_CPU="1"
+POSTGRES_MEMORY_MB="3840"
+
+# 磁碟容量，單位為 GB；正式環境至少建議 20 GB。
 POSTGRES_STORAGE_GB="20"
 
 POSTGRES_NETWORK_NAME="${PROJECT_NAME}-vpc"

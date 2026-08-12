@@ -21,7 +21,9 @@ POSTGRES_DATABASE_NAME=frozen_runner
 POSTGRES_APP_USER=frozen_runner_app
 POSTGRES_MIGRATION_USER=frozen_runner_migration
 POSTGRES_VERSION=POSTGRES_16
-POSTGRES_TIER=db-custom-2-7680
+POSTGRES_EDITION=ENTERPRISE
+POSTGRES_CPU=2
+POSTGRES_MEMORY_MB=7680
 POSTGRES_STORAGE_GB=20
 EOF
   cat >"${temp_dir}/gcloud" <<EOF
@@ -67,6 +69,8 @@ EOF
   update_permissions="$(grep -F 'iam roles update CloudSQLProvisioningOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_cloudsql/scripts/99_remove-exec-iam-account-role.sh"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
+  ! grep -Fq 'servicenetworking.services.list' <<<"${create_permissions}"
+  ! grep -Fq 'compute.globalAddresses' <<<"${create_permissions}"
   ! grep -F 'compute.globalAddresses.create' "${log}"
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudSQLProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/CloudSQLProvisioningOperator' "${log}"
@@ -252,7 +256,9 @@ POSTGRES_DATABASE_NAME=frozen_runner
 POSTGRES_APP_USER=frozen_runner_app
 POSTGRES_MIGRATION_USER=frozen_runner_migration
 POSTGRES_VERSION=POSTGRES_16
-POSTGRES_TIER=db-custom-2-7680
+POSTGRES_EDITION=ENTERPRISE
+POSTGRES_CPU=2
+POSTGRES_MEMORY_MB=7680
 POSTGRES_STORAGE_GB=bad
 POSTGRES_NETWORK_NAME=frozen-runner-vpc
 POSTGRES_INSTANCE_NAME=frozen-runner-main-app-postgres

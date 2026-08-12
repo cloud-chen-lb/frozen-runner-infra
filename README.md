@@ -36,7 +36,7 @@ frozen-runner-infra/
 │       └── README.md
 ├── 02_network/                  # VPC、subnet、Private Services Access、NAT
 ├── 03_cloudsql/                 # private PostgreSQL instance、database、users
-├── 04_main-app/                 # runtime/deploy identities 與 secret metadata
+├── 04_secrets/                 # runtime/deploy identities 與 secret metadata
 ├── 05_co-signer/                # Safeheron Co-Signer VM、KMS 與 IAM
 │   ├── scripts/
 │   │   ├── 00_env.sh           # 載入共用 active environment
@@ -82,7 +82,7 @@ README 為準。
 
 1. [`02_network/README.md`](02_network/README.md)
 2. [`03_cloudsql/README.md`](03_cloudsql/README.md)
-3. [`04_main-app/README.md`](04_main-app/README.md)
+3. [`04_secrets/README.md`](04_secrets/README.md)
 4. [`01_cloudbuild/deploy/README.md`](01_cloudbuild/deploy/README.md)
 
 反向撤銷 custom provisioning role 的順序為 deploy、main-app、Cloud SQL、
@@ -134,7 +134,7 @@ Safeheron activation 與 start/setup 不會寫入 Git 或由 Cloud Build 管理�
 ```bash
 bash 02_network/scripts/99_remove-exec-iam-account-role.sh
 bash 03_cloudsql/scripts/99_remove-exec-iam-account-role.sh
-bash 04_main-app/scripts/99_remove-exec-iam-account-role.sh
+bash 04_secrets/scripts/99_remove-exec-iam-account-role.sh
 bash 01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh
 bash 01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh
 bash 05_co-signer/scripts/99_remove-exec-iam-account-role.sh
@@ -150,11 +150,11 @@ bash 05_co-signer/scripts/99_remove-exec-iam-account-role.sh
 ```bash
 bash 02_network/tests/scripts.sh
 bash 03_cloudsql/tests/scripts.sh
-bash 04_main-app/tests/scripts.sh
+bash 04_secrets/tests/scripts.sh
 bash 01_cloudbuild/base/tests/scripts.sh
 bash 01_cloudbuild/deploy/tests/scripts.sh
 bash 05_co-signer/tests/scripts.sh
-bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_main-app/scripts/*.sh \
+bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_secrets/scripts/*.sh \
   01_cloudbuild/base/scripts/*.sh 01_cloudbuild/deploy/scripts/*.sh \
   01_cloudbuild/build-image/scripts/*.sh 05_co-signer/scripts/*.sh
 ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' \

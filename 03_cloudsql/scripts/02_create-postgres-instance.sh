@@ -5,7 +5,9 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
 
 if [[ ! "${POSTGRES_VERSION}" =~ ^POSTGRES_[0-9]+$ ]] ||
-  [[ ! "${POSTGRES_TIER}" =~ ^db-[a-z0-9-]+$ ]] ||
+  [[ "${POSTGRES_EDITION}" != ENTERPRISE ]] ||
+  [[ ! "${POSTGRES_CPU}" =~ ^[0-9]+$ ]] || (( POSTGRES_CPU < 1 )) ||
+  [[ ! "${POSTGRES_MEMORY_MB}" =~ ^[0-9]+$ ]] || (( POSTGRES_MEMORY_MB < 3840 )) ||
   [[ ! "${POSTGRES_STORAGE_GB}" =~ ^[0-9]+$ ]] || (( POSTGRES_STORAGE_GB < 10 )) ||
   [[ ! "${GOOGLE_PROJECT_REGION}" =~ ^[a-z][a-z0-9-]*[0-9]$ ]] ||
   [[ ! "${POSTGRES_NETWORK_NAME}" =~ ^[a-z][a-z0-9-]{0,62}$ ]]; then
@@ -31,7 +33,7 @@ if gcloud sql instances describe "${POSTGRES_INSTANCE_NAME}" \
   }
 
   check_value 'databaseVersion' "${POSTGRES_VERSION}" 'databaseVersion'
-  check_value 'settings.tier' "${POSTGRES_TIER}" 'tier'
+  check_value 'settings.tier' "db-custom-${POSTGRES_CPU}-${POSTGRES_MEMORY_MB}" 'tier'
   check_value 'settings.dataDiskSizeGb' "${POSTGRES_STORAGE_GB}" 'dataDiskSizeGb'
   check_value 'settings.availabilityType' 'REGIONAL' 'availabilityType'
   check_value 'settings.ipConfiguration.ipv4Enabled' 'False' 'ipv4Enabled'
@@ -50,7 +52,9 @@ else
   gcloud sql instances create "${POSTGRES_INSTANCE_NAME}" \
     --project="${GOOGLE_PROJECT_ID}" \
     --database-version="${POSTGRES_VERSION}" \
-    --tier="${POSTGRES_TIER}" \
+    --edition="${POSTGRES_EDITION}" \
+    --cpu="${POSTGRES_CPU}" \
+    --memory="${POSTGRES_MEMORY_MB}MB" \
     --storage-size="${POSTGRES_STORAGE_GB}" \
     --region="${GOOGLE_PROJECT_REGION}" \
     --availability-type=REGIONAL \

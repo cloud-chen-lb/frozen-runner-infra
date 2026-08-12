@@ -58,17 +58,24 @@ read_password() {
 }
 
 create_user() {
-  local user="$1" secret_version="$2" label="$3" password
+  local user="$1" secret_version="$2" label="$3" password flags_file
   if gcloud sql users describe "${user}" --instance="${POSTGRES_INSTANCE_NAME}" \
     --project="${GOOGLE_PROJECT_ID}" >/dev/null 2>&1; then
     return
   fi
   password="$(read_password "${secret_version}" "${label}")"
+  flags_file="$(mktemp)"
+  chmod 600 "${flags_file}"
+  trap 'rm -f "${flags_file}"' RETURN
   # gcloud receives a descriptor path, not a password-bearing argv value.
+  escaped_password="${password//\'/\'\'}"
+  printf -- "--password: '%s'\n" "${escaped_password}" >"${flags_file}"
   gcloud sql users create "${user}" --instance="${POSTGRES_INSTANCE_NAME}" \
     --project="${GOOGLE_PROJECT_ID}" \
-    --flags-file=<(printf 'password: %s\n' "${password}")
-  unset password
+    --flags-file="${flags_file}"
+  rm -f "${flags_file}"
+  trap - RETURN
+  unset password escaped_password
 }
 
 create_user "${POSTGRES_APP_USER}" "${APP_PASSWORD_SECRET_VERSION}" application

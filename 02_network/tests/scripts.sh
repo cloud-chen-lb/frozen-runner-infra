@@ -63,6 +63,9 @@ EOF
   update_permissions="$(grep -F 'iam roles update NetworkProvisioningOperator' "${log}")"
   PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_network/scripts/99_remove-exec-iam-account-role.sh"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
+  [[ "${create_permissions}" == *'compute.networks.updatePolicy'* ]]
+  [[ "${create_permissions}" == *'compute.networks.use'* ]]
+  [[ "${create_permissions}" == *'compute.globalAddresses.createInternal'* ]]
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/NetworkProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/NetworkProvisioningOperator' "${log}"
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"

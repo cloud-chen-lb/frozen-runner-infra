@@ -19,6 +19,13 @@ EOF
   cat >"${temp_dir}/module-env.sh" <<'EOF'
 CLOUD_BUILD_SOURCE_BRANCH=main
 DEPLOY_SMOKE_TEST_URL=https://example.invalid/health
+APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest
+MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=migration:latest
+APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=username
+MIGRATION_RUNTIME_ENV_VARS=
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
 EOF
   cat >"${temp_dir}/gcloud" <<EOF
 #!/usr/bin/env bash
@@ -60,6 +67,13 @@ EOF
   cat >"${temp_dir}/module-env.sh" <<'EOF'
 CLOUD_BUILD_SOURCE_BRANCH=main
 DEPLOY_SMOKE_TEST_URL=
+APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest
+MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=migration:latest
+APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=username
+MIGRATION_RUNTIME_ENV_VARS=
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
 APP_VPC_ARGS='--network=frozen-runner-vpc --subnet=frozen-runner-main-app-subnet --vpc-egress=all-traffic'
 MIGRATION_VPC_ARGS='--network=frozen-runner-vpc --subnet=frozen-runner-main-app-subnet --vpc-egress=all-traffic'
 PRODUCTION_TRIGGER_NAME=frozen-runner-production-deploy-trigger
@@ -75,20 +89,28 @@ EOF
 
   for variable in APP_SERVICE_ACCOUNT_NAME MIGRATION_SERVICE_ACCOUNT_NAME DEPLOY_SERVICE_ACCOUNT_NAME; do
     while IFS= read -r value; do
-      cat >"${temp_dir}/main-app-env.sh" <<EOF
-APP_SECRET_MAPPING=APP_SECRET=frozen-runner-main-app-secret:latest
-MIGRATION_SECRET_MAPPING=DATABASE_URL=frozen-runner-database-url:latest
+      cat >"${temp_dir}/module-env.sh" <<EOF
+CLOUD_BUILD_SOURCE_BRANCH=main
+DEPLOY_SMOKE_TEST_URL=
+APP_VPC_ARGS='--network=frozen-runner-vpc --subnet=frozen-runner-main-app-subnet --vpc-egress=all-traffic'
+MIGRATION_VPC_ARGS='--network=frozen-runner-vpc --subnet=frozen-runner-main-app-subnet --vpc-egress=all-traffic'
+APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=username
+MIGRATION_RUNTIME_ENV_VARS=
+APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=frozen-runner-app-internal-admin-password:latest,APP_ALERT_API_BEARER_TOKEN=frozen-runner-app-alert-api-bearer-token:latest,APP_DATA_ENCRYPTION_SECRET=frozen-runner-app-data-encryption-secret:latest,APP_DATABASE_URL=frozen-runner-app-database-url:latest,APP_MAILGUN_API_KEY=frozen-runner-app-mailgun-api-key:latest
+MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=frozen-runner-migration-database-url:latest
+APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=frozen-runner-app-internal-admin-username,APP_ALERT_API_IP_ALLOWLIST=frozen-runner-app-alert-api-ip-allowlist,APP_PUBLIC_BASE_URL=frozen-runner-app-public-base-url,APP_FROZEN_ALERT_BASE_URL=frozen-runner-app-frozen-alert-base-url,APP_MAIL_PROVIDER=frozen-runner-app-mail-provider,APP_MAILGUN_DOMAIN=frozen-runner-app-mailgun-domain,APP_MAILGUN_API_URL=frozen-runner-app-mailgun-api-url,APP_EMAIL_FROM=frozen-runner-app-email-from
+MIGRATION_RUNTIME_ENV_VARS=
 APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
 MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
 DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
 EOF
       case "${variable}" in
-        APP_SERVICE_ACCOUNT_NAME) printf 'APP_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/main-app-env.sh" ;;
-        MIGRATION_SERVICE_ACCOUNT_NAME) printf 'MIGRATION_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/main-app-env.sh" ;;
-        DEPLOY_SERVICE_ACCOUNT_NAME) printf 'DEPLOY_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/main-app-env.sh" ;;
+        APP_SERVICE_ACCOUNT_NAME) printf 'APP_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/module-env.sh" ;;
+        MIGRATION_SERVICE_ACCOUNT_NAME) printf 'MIGRATION_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/module-env.sh" ;;
+        DEPLOY_SERVICE_ACCOUNT_NAME) printf 'DEPLOY_SERVICE_ACCOUNT_NAME=%s\n' "${value}" >>"${temp_dir}/module-env.sh" ;;
       esac
       if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
-        MODULE_ENV_FILE="${temp_dir}/module-env.sh" MAIN_APP_ENV_FILE="${temp_dir}/main-app-env.sh" \
+        MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
         bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/04_run-production-deploy.sh" v1.2.3; then
         printf 'Expected invalid %s=%s to fail\n' "${variable}" "${value}" >&2
         return 1
@@ -151,6 +173,13 @@ test_run_rejects_delimiter_in_substitution_before_gcloud() {
   cat >"${temp_dir}/module-env.sh" <<'EOF'
 CLOUD_BUILD_SOURCE_BRANCH=main
 DEPLOY_SMOKE_TEST_URL=
+APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest
+MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=migration:latest
+APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=username
+MIGRATION_RUNTIME_ENV_VARS=
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
 APP_VPC_ARGS='--network=frozen-runner-vpc;touch'
 MIGRATION_VPC_ARGS='--network=frozen-runner-vpc --subnet=frozen-runner-main-app-subnet --vpc-egress=all-traffic'
 EOF
@@ -174,6 +203,56 @@ EOF
   [[ ! -s "${log}" ]]
 }
 
+test_run_rejects_invalid_secret_overrides_before_gcloud() {
+  local temp_dir log override
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "${temp_dir}"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${log}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  for override in \
+    '--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=literal' \
+    '--_APP_SECRET_MAPPING=NOT_ALLOWED=secret:latest' \
+    '--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest,' \
+    $'--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest\nAPP_DATABASE_URL=db:latest' \
+    '--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest;touch' \
+    '--_MIGRATION_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=db:latest'; do
+    if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/04_run-production-deploy.sh" \
+      v1.2.3 "${override}"; then
+      printf 'Expected invalid secret override to fail: %q\n' "${override}" >&2
+      return 1
+    fi
+  done
+  [[ ! -s "${log}" ]]
+}
+
+test_run_rejects_runtime_env_delimiters_before_gcloud() {
+  local temp_dir log override
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "${temp_dir}"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf 'gcloud called\n' >>"${log}"
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  for override in '--_APP_RUNTIME_ENV_VARS=APP_PUBLIC_BASE_URL=https://example.invalid;touch' $'--_MIGRATION_RUNTIME_ENV_VARS=APP_DATABASE_URL=db\n'; do
+    if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_cloudbuild/deploy/scripts/04_run-production-deploy.sh" \
+      v1.2.3 "${override}"; then
+      printf 'Expected invalid runtime env override to fail: %q\n' "${override}" >&2
+      return 1
+    fi
+  done
+  [[ ! -s "${log}" ]]
+}
+
 test_trigger_drift_fails_without_create() {
   local temp_dir log
   temp_dir="$(mktemp -d)"
@@ -187,8 +266,8 @@ if [[ "\$1 \$2 \$3" == "builds triggers describe" ]]; then
     *"--format=value(repositoryEventConfig.repository)"*) printf 'drift-repository\n' ;;
     *"--format=value(repositoryEventConfig.push.branch)"*) printf 'main\n' ;;
     *"--format=value(filename)"*) printf 'cicd/prod/cloudbuild-deploy.yaml\n' ;;
-    *"--format=value(serviceAccount)"*) printf 'drift-account\n' ;;
-    *"--format=value(substitutions._REGION)"*) printf 'asia-east1\n' ;;
+     *"--format=value(serviceAccount)"*) printf 'drift-account\n' ;;
+     *"--format=value(substitutions._REGION)"*) printf 'asia-east1\n' ;;
     *) printf 'frozen-runner-production-deploy-trigger\n' ;;
   esac
   exit 0
@@ -220,10 +299,12 @@ EOF
   [[ -n "${run_lines}" ]]
   grep -F -- '<--region=asia-east1>' "${log}"
   grep -F -- '<--project=echox-project>' "${log}"
-  grep -F -- '<--branch=main>' "${log}"
+  grep -F -- '<--branch=master>' "${log}"
   grep -F -- '<--substitutions=^;^_IMAGE_TAG=v1.2.3;_REGION=asia-east1' "${log}"
-  grep -F -- ';_APP_SECRET_MAPPING=APP_SECRET=frozen-runner-main-app-secret:latest' "${log}"
-  grep -F -- ';_MIGRATION_SECRET_MAPPING=DATABASE_URL=frozen-runner-database-url:latest,DATABASE_USER=frozen-runner-database-user:latest>' "${log}"
+  grep -F -- ';_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=frozen-runner-app-internal-admin-password:latest' "${log}"
+  grep -F -- ';_MIGRATION_SECRET_MAPPING=APP_DATABASE_URL=frozen-runner-migration-database-url:latest;' "${log}"
+  grep -F -- ';_APP_RUNTIME_ENV_VARS=APP_INTERNAL_ADMIN_USERNAME=frozen-runner-app-internal-admin-username' "${log}"
+  grep -F -- ';_MIGRATION_RUNTIME_ENV_VARS=' "${log}"
 }
 
 test_service_account_contract() {
@@ -255,6 +336,11 @@ EOF
   grep -F '_APP_SERVICE_ACCOUNT=cb-frozen-runner-mini' "${log}"
   grep -F '_MIGRATOR_SERVICE_ACCOUNT=cb-frozen-runner-migration' "${log}"
   ! grep -E 'iam\.gserviceaccount\.com.*iam\.gserviceaccount\.com' "${log}"
+}
+
+test_trigger_does_not_load_main_app_mappings() {
+  ! grep -F '04_secrets/scripts/env/env.sh' "${ROOT_DIR}/01_cloudbuild/deploy/scripts/03_create-production-trigger.sh"
+  grep -F 'APP_RUNTIME_ENV_VARS' "${ROOT_DIR}/01_cloudbuild/deploy/scripts/env/env.sh"
 }
 
 test_deploy_yaml_migrates_before_app() {
@@ -292,10 +378,13 @@ test_service_account_ids_reject_non_bare_before_gcloud
 test_role_lifecycle_arguments
 test_run_rejects_invalid_tag_before_gcloud
 test_run_rejects_delimiter_in_substitution_before_gcloud
+test_run_rejects_invalid_secret_overrides_before_gcloud
+test_run_rejects_runtime_env_delimiters_before_gcloud
 test_trigger_drift_fails_without_create
 test_deploy_order_and_substitution_delimiter
 test_service_account_contract
 test_trigger_substitution_contract
+test_trigger_does_not_load_main_app_mappings
 test_deploy_yaml_migrates_before_app
 test_verify_does_not_smoke_without_explicit_url
 printf 'cloudbuild deploy scripts tests passed\n'

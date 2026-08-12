@@ -8,26 +8,29 @@ declare -a SECRET_NAMES=()
 declare -a SECRET_ACCESSORS=()
 
 parse_mapping() {
-  local mapping="$1" accessor="$2" item key reference secret_name version
-  local -a items
+  local mapping="$1" accessor="$2"
+  local item key secret_name version
+  local -a items mapping_keys=()
   IFS=',' read -r -a items <<<"${mapping}"
   ((${#items[@]} > 0)) || return 1
   for item in "${items[@]}"; do
-    [[ "${item}" == *=*:* ]] || return 1
-    key="${item%%=*}"
-    reference="${item#*=}"
-    secret_name="${reference%:*}"
-    version="${reference##*:}"
-    [[ "${key}" =~ ^[A-Z][A-Z0-9_]*$ ]] || return 1
-    [[ "${secret_name}" =~ ^[a-zA-Z0-9_-]{1,255}$ ]] || return 1
-    [[ "${version}" =~ ^[a-zA-Z0-9_-]+$ ]] || return 1
+    [[ "${item}" =~ ^([A-Z][A-Z0-9_]*)=([a-zA-Z0-9_-]{1,255}):([a-zA-Z0-9_-]+)$ ]] || return 1
+    key="${BASH_REMATCH[1]}"
+    secret_name="${BASH_REMATCH[2]}"
+    version="${BASH_REMATCH[3]}"
     if ((${#SECRET_NAMES[@]} > 0)); then
       for existing_name in "${SECRET_NAMES[@]}"; do
         [[ "${existing_name}" != "${secret_name}" ]] || return 1
       done
     fi
+    if ((${#mapping_keys[@]} > 0)); then
+      for existing_key in "${mapping_keys[@]}"; do
+        [[ "${existing_key}" != "${key}" ]] || return 1
+      done
+    fi
     SECRET_NAMES+=("${secret_name}")
     SECRET_ACCESSORS+=("${accessor}")
+    mapping_keys+=("${key}")
   done
 }
 
