@@ -30,6 +30,14 @@ bash 03_cloudsql/scripts/02_create-postgres-instance.sh
 bash 03_cloudsql/scripts/03_create-postgres-database-users.sh
 ```
 
+建立完成後，可查詢 private IP 並輸出不含真實密碼的 connection strings：
+
+```bash
+bash 03_cloudsql/scripts/04_print-connection-strings.sh
+```
+
+輸出中的 `<PASSWORD>` 只是假值；請使用安全的外部 secret 注入方式替換，勿將真實密碼寫入 repo 或 log。
+
 第三支 script 建立 users 時，密碼只能由 stdin 或已核准的 Secret Manager
 version reference 取得。互動輸入：
 

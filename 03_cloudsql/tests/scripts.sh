@@ -280,6 +280,45 @@ EOF
   fi
 }
 
+test_connection_strings_use_private_host_without_passwords() {
+  local temp_dir log output
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then
+  printf '10.20.30.40\n'
+  exit 0
+fi
+exit 99
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_cloudsql/scripts/04_print-connection-strings.sh")"
+  [[ "${output}" == $'APP_DATABASE_URL=postgresql://frozen_runner_app:<PASSWORD>@10.20.30.40/frozen_runner\nMIGRATION_DATABASE_URL=postgresql://frozen_runner_migration:<PASSWORD>@10.20.30.40/frozen_runner' ]]
+  grep -F 'sql instances describe frozen-runner-main-app-postgres --project=echox-project --format=value(ipAddresses[0].ipAddress)' "${log}"
+  ! grep -Eiq 'password|secret|app-password|migration-password' "${log}"
+}
+
+test_connection_strings_fail_on_empty_host() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_cloudsql/scripts/04_print-connection-strings.sh" 2>"${temp_dir}/error"; then
+    printf 'Expected an empty Cloud SQL host to fail\n' >&2
+    return 1
+  fi
+  grep -F 'Cloud SQL host is empty' "${temp_dir}/error"
+}
+
 test_invalid_env_fails_before_gcloud
 test_valid_env_loads
 test_valid_env_can_be_sourced
@@ -291,4 +330,6 @@ test_postgres_instance_ambiguous_backup_output_fails
 test_postgres_database_and_users_paths
 test_postgres_database_and_users_existing_are_reused
 test_postgres_invalid_config_fails_before_gcloud
+test_connection_strings_use_private_host_without_passwords
+test_connection_strings_fail_on_empty_host
 printf 'cloudsql scripts tests passed\n'
