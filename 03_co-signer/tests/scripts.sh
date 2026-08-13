@@ -20,6 +20,10 @@ test_script_layout_and_safety() {
   [[ "${KMS_KEYRING}" == "frozen-runner-kms" ]]
   [[ "${MYSQL_INSTANCE_NAME}" == "frozen-runner-cosigner-mysql" ]]
   [[ "${MYSQL_NETWORK_NAME}" == "frozen-runner-vpc" ]]
+  unset VM_ZONE VM_MACHINE_TYPE VM_VPC_NETWORK
+  source "${ROOT_DIR}/03_co-signer/scripts/env/env-merchant-echox.sh"
+  [[ "${VM_ZONE}" == "asia-east1-a" ]]
+  [[ "${VM_MACHINE_TYPE}" == "e2-medium" ]]
   [[ "${VM_VPC_NETWORK}" == "frozen-runner-cosigner-subnet" ]]
   ! grep -Eiq 'PAIRING_TOKEN|MYSQL_PASSWORD|PRIVATE KEY' \
     "${ROOT_DIR}/03_co-signer/co-signer.env" \
@@ -39,7 +43,7 @@ test_merchant_argument_and_env_validation() {
   if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" missing </dev/null 2>&1)"; then
     return 1
   fi
-  [[ "${output}" == *"merchant-cosigner-missing.env"* ]]
+  [[ "${output}" == *"env-merchant-missing.sh"* ]]
   for script in 05_create-mysql-database-user.sh 06_create-vm.sh; do
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" Bad </dev/null 2>&1)"; then
       return 1
@@ -48,7 +52,7 @@ test_merchant_argument_and_env_validation() {
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" missing </dev/null 2>&1)"; then
       return 1
     fi
-    [[ "${output}" == *"merchant-cosigner-missing.env"* ]]
+    [[ "${output}" == *"env-merchant-missing.sh"* ]]
   done
 }
 
@@ -63,9 +67,9 @@ printf '%s\n' "\$*" >>"${log}"
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" acme
-  grep -F 'kms keys add-iam-policy-binding frozen-runner-acme-cosigner-kms-key' "${log}"
-  grep -F -- '--member=serviceAccount:frozen-runner-acme-cosigner-sa@echox-project.iam.gserviceaccount.com' "${log}"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" echox
+  grep -F 'kms keys add-iam-policy-binding frozen-runner-echox-cosigner-kms-key' "${log}"
+  grep -F -- '--member=serviceAccount:echox-cosigner-sa@echox-project.iam.gserviceaccount.com' "${log}"
   ! grep -F 'frozen-runner-other' "${log}"
 }
 
@@ -85,8 +89,57 @@ EOF
   ! grep -Eiq 'password|private[_-]?key|\.json|BEGIN .*PRIVATE KEY|create|update' "${log}"
 }
 
+test_iam_permissions_have_no_leading_whitespace() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "iam roles describe" ]]; then
+  exit 1
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"
+  ! grep -E -- '--permissions=.*(^|,) ' "${log}"
+  grep -F -- 'cloudsql.users.create' "${log}"
+  grep -F -- 'cloudsql.instances.create' "${log}"
+  grep -F -- 'cloudsql.instances.get' "${log}"
+  grep -F -- 'cloudsql.instances.list' "${log}"
+  grep -F -- 'cloudsql.databases.create' "${log}"
+  grep -F -- 'cloudsql.databases.get' "${log}"
+}
+
+test_mysql_backup_flags_match_mysql_api() {
+  ! grep -F -- '--enable-point-in-time-recovery' \
+    "${ROOT_DIR}/03_co-signer/scripts/02_create-mysql-instance.sh"
+  grep -F -- '--enable-bin-log' \
+    "${ROOT_DIR}/03_co-signer/scripts/02_create-mysql-instance.sh"
+}
+
+test_merchant_kms_is_rerunnable_after_account_creation() {
+  grep -F -- 'iam service-accounts describe' \
+    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+  grep -F -- 'kms keys describe' \
+    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+  grep -F -- 'Timed out waiting for service account propagation' \
+    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+}
+
+test_vm_is_rerunnable_after_ip_creation() {
+  grep -F -- 'compute addresses describe' \
+    "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh"
+}
+
 test_script_layout_and_safety
 test_merchant_argument_and_env_validation
 test_merchant_kms_is_scoped_to_merchant
 test_role_removal_uses_shared_env
+test_iam_permissions_have_no_leading_whitespace
+test_mysql_backup_flags_match_mysql_api
+test_merchant_kms_is_rerunnable_after_account_creation
+test_vm_is_rerunnable_after_ip_creation
 printf 'co-signer scripts tests passed\n'

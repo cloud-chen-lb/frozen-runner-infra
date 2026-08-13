@@ -24,5 +24,5 @@ else
     --memory="${MYSQL_MEMORY_MB}MB" --storage-size="${MYSQL_STORAGE_GB}" \
     --region="${GOOGLE_PROJECT_REGION}" --availability-type=REGIONAL \
     --network="${MYSQL_NETWORK_NAME}" --no-assign-ip --backup-start-time=03:00 \
-    --enable-point-in-time-recovery --deletion-protection
+    --enable-bin-log --deletion-protection
 fi

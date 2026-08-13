@@ -95,3 +95,23 @@
         
         開發人員透過 `Pairing Token` 啟動 Co-Signer 後會提供 `激活碼` 和 `QR Code` 給 Safeheron團隊創建人，創建人審核同意以後 Co-Signer 才正式可用
       
+## 設定 Co-Signer 審批
+
+### 增加 co-signer 審批節點
+
+左側選單 -> 管理 -> 審批節點 -> 新增審批節點
+
+ - 節點名稱輸入 `Frozen Runner`
+ - 審批人選擇 `frozen-runner-cosigner`
+
+### 增加策略引擎
+
+左側選單 -> 管理 -> 策略引擎 -> 建立新策略
+
+ - 策略名稱輸入 `Frozen Runner`
+ - 發起人 選擇 API Key `frozen-runner`
+ - 源帳戶(From) 選擇全部錢包
+ - 目標帳戶(To) 選擇全部錢包 不要選擇白名單和外部地址
+ - 審批節點設定 設定上一個步驟中新增的 節點 `Frozen Runner`
+
+新增策略以後 確保此策略的排序是會被執行到的即可

@@ -20,34 +20,39 @@ if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PR
     --description="${ROLE_DESCRIPTION}" \
     --stage="GA" \
     --permissions="\
- cloudkms.keyRings.create,\
- cloudkms.keyRings.get,\
- cloudkms.keyRings.list,\
- cloudkms.cryptoKeys.create,\
- cloudkms.cryptoKeys.get,\
- cloudkms.cryptoKeys.list,\
- cloudkms.cryptoKeys.getIamPolicy,\
- cloudkms.cryptoKeys.setIamPolicy,\
- iam.serviceAccounts.create,\
- iam.serviceAccounts.actAs,\
- iam.serviceAccounts.get,\
- iam.serviceAccounts.list,\
- compute.instances.create,\
- compute.instances.get,\
- compute.instances.list,\
- compute.instances.setMetadata,\
- compute.instances.setServiceAccount,\
- compute.disks.create,\
- compute.addresses.create,\
- compute.addresses.get,\
- compute.addresses.use,\
- compute.subnetworks.use,\
-  compute.subnetworks.useExternalIp,\
-  cloudsql.users.create,\
-  cloudsql.users.get,\
-  cloudsql.users.list,\
-  cloudsql.users.update,\
-  resourcemanager.projects.get"
+cloudkms.keyRings.create,\
+cloudkms.keyRings.get,\
+cloudkms.keyRings.list,\
+cloudkms.cryptoKeys.create,\
+cloudkms.cryptoKeys.get,\
+cloudkms.cryptoKeys.list,\
+cloudkms.cryptoKeys.getIamPolicy,\
+cloudkms.cryptoKeys.setIamPolicy,\
+iam.serviceAccounts.create,\
+iam.serviceAccounts.actAs,\
+iam.serviceAccounts.get,\
+iam.serviceAccounts.list,\
+compute.instances.create,\
+compute.instances.get,\
+compute.instances.list,\
+compute.instances.setMetadata,\
+compute.instances.setServiceAccount,\
+compute.disks.create,\
+compute.addresses.create,\
+compute.addresses.get,\
+compute.addresses.use,\
+compute.subnetworks.use,\
+compute.subnetworks.useExternalIp,\
+cloudsql.instances.create,\
+cloudsql.instances.get,\
+cloudsql.instances.list,\
+cloudsql.databases.create,\
+cloudsql.databases.get,\
+cloudsql.users.create,\
+cloudsql.users.get,\
+cloudsql.users.list,\
+cloudsql.users.update,\
+resourcemanager.projects.get"
 else
   # 在 ${GOOGLE_PROJECT_ID} 新增 co-signer 自訂 IAM role。
   gcloud iam roles create "${ROLE_ID}" \
@@ -78,12 +83,17 @@ compute.addresses.create,\
 compute.addresses.get,\
 compute.addresses.use,\
 compute.subnetworks.use,\
-  compute.subnetworks.useExternalIp,\
-  cloudsql.users.create,\
-  cloudsql.users.get,\
-  cloudsql.users.list,\
-  cloudsql.users.update,\
-  resourcemanager.projects.get"
+compute.subnetworks.useExternalIp,\
+cloudsql.instances.create,\
+cloudsql.instances.get,\
+cloudsql.instances.list,\
+cloudsql.databases.create,\
+cloudsql.databases.get,\
+cloudsql.users.create,\
+cloudsql.users.get,\
+cloudsql.users.list,\
+cloudsql.users.update,\
+resourcemanager.projects.get"
 fi
 
 # 授權執行帳號使用 ${GOOGLE_PROJECT_ID} 的 co-signer role，修改專案 IAM policy。

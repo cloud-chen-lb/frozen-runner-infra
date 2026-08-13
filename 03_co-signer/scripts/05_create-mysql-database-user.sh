@@ -6,7 +6,7 @@ source "${SCRIPT_DIR}/00_env.sh"
 if (($# != 1)); then printf 'Usage: %s <merchant>\n' "$0" >&2; exit 1; fi
 MERCHANT_SLUG="$1"
 [[ "${MERCHANT_SLUG}" =~ ^[a-z][a-z0-9-]{0,30}$ ]] || { printf 'A valid merchant slug is required\n' >&2; exit 1; }
-MERCHANT_ENV_FILE="${SCRIPT_DIR}/env/merchant-cosigner-${MERCHANT_SLUG}.env"
+MERCHANT_ENV_FILE="${SCRIPT_DIR}/env/env-merchant-${MERCHANT_SLUG}.sh"
 [[ -f "${MERCHANT_ENV_FILE}" ]] || { printf 'Merchant environment file not found: %s\n' "${MERCHANT_ENV_FILE}" >&2; exit 1; }
 source "${MERCHANT_ENV_FILE}"
 
