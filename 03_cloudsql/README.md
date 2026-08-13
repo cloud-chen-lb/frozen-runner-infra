@@ -28,6 +28,13 @@ database users。GCP target 永遠是 `global-env/env.sh` 的
 bash 03_cloudsql/scripts/01_setup-exec-iam-account-role.sh
 bash 03_cloudsql/scripts/02_create-postgres-instance.sh
 bash 03_cloudsql/scripts/03_create-postgres-database-users.sh
+bash 03_cloudsql/scripts/02_create-mysql-instance.sh
+```
+
+每個商戶在建立 VM 前建立自己的 MySQL database/user：
+
+```bash
+printf '%s\n' '<PASSWORD>' | bash 03_cloudsql/scripts/03_create-mysql-database-user.sh --merchant-slug=merchant-a
 ```
 
 建立完成後，可查詢 private IP 並輸出不含真實密碼的 connection strings：

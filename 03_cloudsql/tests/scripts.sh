@@ -98,7 +98,8 @@ EOF
   grep -F 'sql instances create frozen-runner-main-app-postgres' "${log}"
   grep -F -- '--project=echox-project' "${log}"
   grep -F -- '--database-version=POSTGRES_16' "${log}"
-  grep -F -- '--tier=db-custom-2-7680' "${log}"
+  grep -F -- '--cpu=1' "${log}"
+  grep -F -- '--memory=3840MB' "${log}"
   grep -F -- '--storage-size=20' "${log}"
   grep -F -- '--availability-type=REGIONAL' "${log}"
   grep -F -- '--network=frozen-runner-vpc' "${log}"
@@ -280,6 +281,53 @@ EOF
   fi
 }
 
+test_mysql_instance_create_contract() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then exit 1; fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_cloudsql/scripts/02_create-mysql-instance.sh"
+  grep -F 'sql instances create frozen-runner-cosigner-mysql' "${log}"
+  grep -F -- '--database-version=MYSQL_8_0' "${log}"
+  grep -F -- '--network=frozen-runner-vpc' "${log}"
+  grep -F -- '--no-assign-ip' "${log}"
+}
+
+test_mysql_merchant_database_and_user_contract() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+case "\$1 \$2 \$3" in
+  "sql databases describe"|"sql users describe") exit 1 ;;
+esac
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  printf 'merchant-password\n' | PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_cloudsql/scripts/03_create-mysql-database-user.sh" --merchant-slug=acme
+  grep -F 'sql databases create cosigner_acme' "${log}"
+  grep -F 'sql users create cosigner_acme_user' "${log}"
+  [[ "$(grep -n 'sql databases create' "${log}" | cut -d: -f1)" -lt \
+    "$(grep -n 'sql users create' "${log}" | cut -d: -f1)" ]]
+  ! grep -F 'merchant-password' "${log}"
+}
+
+test_mysql_merchant_slug_is_required() {
+  if bash "${ROOT_DIR}/03_cloudsql/scripts/03_create-mysql-database-user.sh" </dev/null; then
+    printf 'Expected merchant slug to be required\n' >&2
+    return 1
+  fi
+}
+
 test_connection_strings_use_private_host_without_passwords() {
   local temp_dir log output
   temp_dir="$(mktemp -d)"
@@ -330,6 +378,9 @@ test_postgres_instance_ambiguous_backup_output_fails
 test_postgres_database_and_users_paths
 test_postgres_database_and_users_existing_are_reused
 test_postgres_invalid_config_fails_before_gcloud
+test_mysql_instance_create_contract
+test_mysql_merchant_database_and_user_contract
+test_mysql_merchant_slug_is_required
 test_connection_strings_use_private_host_without_passwords
 test_connection_strings_fail_on_empty_host
 printf 'cloudsql scripts tests passed\n'

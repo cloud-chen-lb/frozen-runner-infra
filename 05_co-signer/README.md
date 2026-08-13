@@ -12,6 +12,8 @@ bash 05_co-signer/scripts/02_create-cloud-kms.sh
 bash 05_co-signer/scripts/03_create-vm.sh
 ```
 
+先完成 network 與共用 MySQL instance，再以 `--merchant-slug` 建立商戶 database/user，最後建立該商戶 VM。
+
 01 ~ 03
 
 產生 callback key

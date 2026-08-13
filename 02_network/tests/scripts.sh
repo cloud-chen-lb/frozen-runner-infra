@@ -22,6 +22,8 @@ EXEC_IAM_ACCOUNT=
 EOF
   cat >"${temp_dir}/module-env.sh" <<'EOF'
 MAIN_APP_SUBNET_CIDR=10.20.0.0/24
+COSIGNER_SUBNET_CIDR=10.40.0.0/24
+COSIGNER_SUBNET_CIDR=10.40.0.0/24
 PRIVATE_SERVICES_RANGE_CIDR=10.30.0.0/16
 EOF
   cat >"${temp_dir}/gcloud" <<EOF
@@ -87,6 +89,7 @@ EXEC_IAM_ACCOUNT=cloud.chen@getoken.io
 EOF
   cat >"${temp_dir}/module-env.sh" <<'EOF'
 MAIN_APP_SUBNET_CIDR=not-a-cidr
+COSIGNER_SUBNET_CIDR=10.40.0.0/24
 PRIVATE_SERVICES_RANGE_CIDR=10.30.0.0/16
 EOF
   cat >"${temp_dir}/gcloud" <<'EOF'
@@ -95,7 +98,7 @@ printf 'gcloud must not be called\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh \
+  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh 05_create-cosigner-subnet.sh \
     05_create-private-services-access.sh 06_create-router-nat.sh; do
     if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
       MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/02_network/scripts/${script}"; then
@@ -122,18 +125,19 @@ esac
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh \
+  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh 05_create-cosigner-subnet.sh \
     05_create-private-services-access.sh 06_create-router-nat.sh; do
     PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_network/scripts/${script}"
   done
   grep -F 'compute networks create frozen-runner-vpc' "${log}"
   grep -F 'compute networks subnets create frozen-runner-main-app-subnet' "${log}"
+  grep -F 'compute networks subnets create frozen-runner-cosigner-subnet' "${log}"
   grep -F 'compute addresses create frozen-runner-private-services-range' "${log}"
   grep -F 'services vpc-peerings connect' "${log}"
   grep -F 'compute routers create frozen-runner-router' "${log}"
   grep -F 'compute addresses create frozen-runner-main-app-egress-ip' "${log}"
   grep -F 'compute routers nats create frozen-runner-main-app-nat' "${log}"
-  ! grep -Eiq 'cosigner|mysql|vm|load-balancer|password|private[_-]?key|\.json|BEGIN .*PRIVATE KEY' "${log}"
+  ! grep -Eiq 'mysql|load-balancer|password|private[_-]?key|\.json|BEGIN .*PRIVATE KEY' "${log}"
 }
 
 test_network_scripts_fail_on_drift() {

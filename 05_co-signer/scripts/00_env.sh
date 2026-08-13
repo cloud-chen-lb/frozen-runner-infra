@@ -38,7 +38,7 @@ VM_ZONE="asia-east1-a"
 # VM 使用的機器類型
 VM_MACHINE_TYPE="e2-medium"
 # VM 使用的 VPC 網路，需與執行服務的 VM 相同
-VM_VPC_NETWORK="default"
+VM_VPC_NETWORK="${PROJECT_NAME}-cosigner-subnet"
 # 要建立的 VM 名稱
 VM_NAME="${PROJECT_NAME}-cosigner"
 # VM 靜態外部 IP 的名稱

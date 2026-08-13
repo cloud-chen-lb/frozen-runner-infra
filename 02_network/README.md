@@ -12,6 +12,7 @@ naming。
 `EXEC_IAM_ACCOUNT`。再確認 `scripts/env/env.sh` 的非機密設定：
 
 - `MAIN_APP_SUBNET_CIDR`
+- `COSIGNER_SUBNET_CIDR` (`10.40.0.0/24`)
 - `PRIVATE_SERVICES_RANGE_CIDR`
 - 其餘 `*_NAME` 由 `PROJECT_NAME` 組成，不要改成另一個 project 的名稱。
 
@@ -24,6 +25,7 @@ bash 02_network/scripts/01_setup-exec-iam-account-role.sh
 bash 02_network/scripts/02_enable-apis.sh
 bash 02_network/scripts/03_create-vpc.sh
 bash 02_network/scripts/04_create-main-app-subnet.sh
+bash 02_network/scripts/05_create-cosigner-subnet.sh
 bash 02_network/scripts/05_create-private-services-access.sh
 bash 02_network/scripts/06_create-router-nat.sh
 ```
