@@ -14,19 +14,26 @@
 
 # Safeheron co-Signer 安裝
 
-本目錄使用 repo 共用的 `global-env/env.sh`。執行 Co-Signer 建置腳本前，先確認
-其中的 `PROJECT_NAME`、`GOOGLE_PROJECT_ID` 與 `GOOGLE_PROJECT_REGION` 已指向
-目前要操作的 GCP project；腳本不再接受 `dev` 或 `prod` 參數。
+本目錄使用 repo 共用的 `global-env/env.sh`。執行腳本前，先確認
+`PROJECT_NAME`、`GOOGLE_PROJECT_ID` 與 `GOOGLE_PROJECT_REGION` 已指向目前的 GCP project。
+每個商戶都必須有 `scripts/env/merchant-cosigner-<merchant>.env`；檔案只放非機密資源設定。
+Pairing token、MySQL 密碼與其他 secret 不得放入 Git。
 
-依序執行：
+先建立共用資源，再逐一建立商戶資源：
 
 ```bash
 bash 03_co-signer/scripts/01_setup-exec-iam-account-role.sh
-bash 03_co-signer/scripts/02_create-cloud-kms.sh
-bash 03_co-signer/scripts/03_create-vm.sh
+bash 03_co-signer/scripts/02_create-mysql-instance.sh
+bash 03_co-signer/scripts/03_create-cloud-kms-keyring.sh
+
+# 將 acme 替換成 scripts/env/merchant-cosigner-<merchant>.env 的 merchant slug
+bash 03_co-signer/scripts/04_create-merchant-cloud-kms.sh acme
+bash 03_co-signer/scripts/05_create-mysql-database-user.sh acme
+bash 03_co-signer/scripts/06_create-vm.sh acme
 ```
 
-先完成 network 與共用 MySQL instance，再以 `--merchant-slug` 建立商戶 database/user，最後建立該商戶 VM。
+`02_create-mysql-instance.sh` 與 `03_create-cloud-kms-keyring.sh` 只需執行一次。
+商戶流程建立該商戶專屬的 KMS key、service account、database/user、VM 與 reserved static IP。
 
 ## 產生 API Key
 
@@ -56,7 +63,7 @@ openssl rsa -in callback_handler_private.pem -out callback_handler_public.pem -p
 
 部署 API Co-Signer
 名稱: frozen-runner-co-signer-api
-ip白名單: scripts/scripts/03_create-vm.sh 建立完成以後的 public ip
+ip白名單: `06_create-vm.sh` 建立完成以後的 public ip
 callback
   - URL: {BASE_URL}/api/safeheron/03_co-signer/callback
   - 公鑰: 貼入上面生成的公鑰
