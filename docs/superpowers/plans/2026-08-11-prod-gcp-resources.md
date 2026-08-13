@@ -25,50 +25,50 @@
 
 ### Existing files to modify
 
-- `01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh`: 改成可重跑的 Cloud Build provisioning role create/update/bind。
-- `01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh`: 新增只撤銷 Cloud Build provisioning role 的清理腳本。
-- `05_co-signer/scripts/99_remove-exec-iam-account-role.sh`: 新增只撤銷既有 Co-Signer provisioning role 的清理腳本；本計畫不執行 Co-Signer 資源建立。
-- `01_cloudbuild/base/scripts/00_env.sh`: 保持 global/module env loading contract，必要時補上 shared validation。
+- `02_main-app/base/scripts/01_setup-exec-iam-account-role.sh`: 改成可重跑的 Cloud Build provisioning role create/update/bind。
+- `02_main-app/base/scripts/99_remove-exec-iam-account-role.sh`: 新增只撤銷 Cloud Build provisioning role 的清理腳本。
+- `03_co-signer/scripts/99_remove-exec-iam-account-role.sh`: 新增只撤銷既有 Co-Signer provisioning role 的清理腳本；本計畫不執行 Co-Signer 資源建立。
+- `02_main-app/base/scripts/00_env.sh`: 保持 global/module env loading contract，必要時補上 shared validation。
 - `/Users/leadbest/Documents/Work/frozen-runner/cicd/prod/cloudbuild-deploy.yaml`: 將硬編碼 project identity 改成 `${PROJECT_ID}`，保留 migration-before-app 順序。
 - `README.md`: 補上 network、Cloud SQL、main-app、deploy module 的執行順序與 revoke 說明。
 
 ### New files
 
-- `02_network/scripts/env/env.sh`
-- `02_network/scripts/00_env.sh`
-- `02_network/scripts/01_setup-exec-iam-account-role.sh`
-- `02_network/scripts/02_enable-apis.sh`
-- `02_network/scripts/03_create-vpc.sh`
-- `02_network/scripts/04_create-main-app-subnet.sh`
-- `02_network/scripts/05_create-private-services-access.sh`
-- `02_network/scripts/06_create-router-nat.sh`
-- `02_network/scripts/99_remove-exec-iam-account-role.sh`
-- `02_network/tests/scripts.sh`
-- `03_cloudsql/scripts/env/env.sh`
-- `03_cloudsql/scripts/00_env.sh`
-- `03_cloudsql/scripts/01_setup-exec-iam-account-role.sh`
-- `03_cloudsql/scripts/02_create-postgres-instance.sh`
-- `03_cloudsql/scripts/03_create-postgres-database-users.sh`
-- `03_cloudsql/scripts/99_remove-exec-iam-account-role.sh`
-- `03_cloudsql/tests/scripts.sh`
-- `04_secrets/scripts/env/env.sh`
-- `04_secrets/scripts/00_env.sh`
-- `04_secrets/scripts/01_setup-exec-iam-account-role.sh`
-- `04_secrets/scripts/02_setup-service-accounts.sh`
-- `04_secrets/scripts/03_setup-secrets.sh`
-- `04_secrets/scripts/99_remove-exec-iam-account-role.sh`
-- `04_secrets/tests/scripts.sh`
-- `01_cloudbuild/deploy/scripts/env/env.sh`
-- `01_cloudbuild/deploy/scripts/00_env.sh`
-- `01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh`
-- `01_cloudbuild/deploy/scripts/02_setup-deploy-iam.sh`
-- `01_cloudbuild/deploy/scripts/03_create-production-trigger.sh`
-- `01_cloudbuild/deploy/scripts/04_run-production-deploy.sh`
-- `01_cloudbuild/deploy/scripts/05_verify-deployment.sh`
-- `01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh`
-- `01_cloudbuild/deploy/tests/scripts.sh`
-- `01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh`
-- `05_co-signer/scripts/99_remove-exec-iam-account-role.sh`
+- `01_share-resources/scripts/env/env.sh`
+- `01_share-resources/scripts/00_env.sh`
+- `01_share-resources/scripts/01_setup-exec-iam-account-role.sh`
+- `01_share-resources/scripts/02_enable-apis.sh`
+- `01_share-resources/scripts/03_create-vpc.sh`
+- `01_share-resources/scripts/04_create-main-app-subnet.sh`
+- `01_share-resources/scripts/05_create-private-services-access.sh`
+- `01_share-resources/scripts/06_create-router-nat.sh`
+- `01_share-resources/scripts/99_remove-exec-iam-account-role.sh`
+- `01_share-resources/tests/scripts.sh`
+- `02_main-app/scripts/env/env.sh`
+- `02_main-app/scripts/00_env.sh`
+- `02_main-app/scripts/01_setup-exec-iam-account-role.sh`
+- `02_main-app/scripts/02_create-postgres-instance.sh`
+- `02_main-app/scripts/03_create-postgres-database-users.sh`
+- `02_main-app/scripts/99_remove-exec-iam-account-role.sh`
+- `02_main-app/tests/scripts.sh`
+- `02_main-app/scripts/env/env.sh`
+- `02_main-app/scripts/00_env.sh`
+- `02_main-app/scripts/01_setup-exec-iam-account-role.sh`
+- `02_main-app/scripts/02_setup-service-accounts.sh`
+- `02_main-app/scripts/03_setup-secrets.sh`
+- `02_main-app/scripts/99_remove-exec-iam-account-role.sh`
+- `02_main-app/tests/scripts.sh`
+- `02_main-app/deploy/scripts/env/env.sh`
+- `02_main-app/deploy/scripts/00_env.sh`
+- `02_main-app/deploy/scripts/01_setup-exec-iam-account-role.sh`
+- `02_main-app/deploy/scripts/02_setup-deploy-iam.sh`
+- `02_main-app/deploy/scripts/03_create-production-trigger.sh`
+- `02_main-app/deploy/scripts/04_run-production-deploy.sh`
+- `02_main-app/deploy/scripts/05_verify-deployment.sh`
+- `02_main-app/deploy/scripts/99_remove-exec-iam-account-role.sh`
+- `02_main-app/deploy/tests/scripts.sh`
+- `02_main-app/base/scripts/99_remove-exec-iam-account-role.sh`
+- `03_co-signer/scripts/99_remove-exec-iam-account-role.sh`
 
 ---
 
@@ -76,12 +76,12 @@
 
 **Files:**
 
-- Create: `02_network/scripts/env/env.sh`, `02_network/scripts/00_env.sh`
-- Create: `03_cloudsql/scripts/env/env.sh`, `03_cloudsql/scripts/00_env.sh`
-- Create: `04_secrets/scripts/env/env.sh`, `04_secrets/scripts/00_env.sh`
-- Create: `01_cloudbuild/deploy/scripts/env/env.sh`, `01_cloudbuild/deploy/scripts/00_env.sh`
-- Modify: `01_cloudbuild/base/scripts/00_env.sh`
-- Test: `02_network/tests/scripts.sh`, `03_cloudsql/tests/scripts.sh`, `04_secrets/tests/scripts.sh`, `01_cloudbuild/deploy/tests/scripts.sh`
+- Create: `01_share-resources/scripts/env/env.sh`, `01_share-resources/scripts/00_env.sh`
+- Create: `02_main-app/scripts/env/env.sh`, `02_main-app/scripts/00_env.sh`
+- Create: `02_main-app/scripts/env/env.sh`, `02_main-app/scripts/00_env.sh`
+- Create: `02_main-app/deploy/scripts/env/env.sh`, `02_main-app/deploy/scripts/00_env.sh`
+- Modify: `02_main-app/base/scripts/00_env.sh`
+- Test: `01_share-resources/tests/scripts.sh`, `02_main-app/tests/scripts.sh`, `02_main-app/tests/scripts.sh`, `02_main-app/deploy/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -110,13 +110,13 @@
 
 **Files:**
 
-- Modify: `01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh`
-- Create: `02_network/scripts/01_setup-exec-iam-account-role.sh`, `02_network/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `03_cloudsql/scripts/01_setup-exec-iam-account-role.sh`, `03_cloudsql/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `04_secrets/scripts/01_setup-exec-iam-account-role.sh`, `04_secrets/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `01_cloudbuild/deploy/scripts/01_setup-exec-iam-account-role.sh`, `01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh`
-- Create: `05_co-signer/scripts/99_remove-exec-iam-account-role.sh`
+- Modify: `02_main-app/base/scripts/01_setup-exec-iam-account-role.sh`
+- Create: `01_share-resources/scripts/01_setup-exec-iam-account-role.sh`, `01_share-resources/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `02_main-app/scripts/01_setup-exec-iam-account-role.sh`, `02_main-app/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `02_main-app/scripts/01_setup-exec-iam-account-role.sh`, `02_main-app/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `02_main-app/deploy/scripts/01_setup-exec-iam-account-role.sh`, `02_main-app/deploy/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `02_main-app/base/scripts/99_remove-exec-iam-account-role.sh`
+- Create: `03_co-signer/scripts/99_remove-exec-iam-account-role.sh`
 - Test: module `tests/scripts.sh` files
 
 **Interfaces:**
@@ -144,9 +144,9 @@
 
   Run all module shell tests and `bash -n` for every setup/removal script.
 
-`01_cloudbuild/build-image` is intentionally excluded from this role set because it consumes the existing `01_cloudbuild/base` environment and image-builder identity; it does not own provisioning resources.
+`02_main-app/build-image` is intentionally excluded from this role set because it consumes the existing `02_main-app/base` environment and image-builder identity; it does not own provisioning resources.
 
-`05_co-signer/scripts/01_setup-exec-iam-account-role.sh` already owns a provisioning role, so its matching removal script is included for cleanup completeness. This does not activate or modify any Co-Signer VM, KMS, MySQL, subnet, or merchant resource.
+`03_co-signer/scripts/01_setup-exec-iam-account-role.sh` already owns a provisioning role, so its matching removal script is included for cleanup completeness. This does not activate or modify any Co-Signer VM, KMS, MySQL, subnet, or merchant resource.
 
 ---
 
@@ -154,12 +154,12 @@
 
 **Files:**
 
-- Create: `02_network/scripts/02_enable-apis.sh`
-- Create: `02_network/scripts/03_create-vpc.sh`
-- Create: `02_network/scripts/04_create-main-app-subnet.sh`
-- Create: `02_network/scripts/05_create-private-services-access.sh`
-- Create: `02_network/scripts/06_create-router-nat.sh`
-- Modify: `02_network/tests/scripts.sh`
+- Create: `01_share-resources/scripts/02_enable-apis.sh`
+- Create: `01_share-resources/scripts/03_create-vpc.sh`
+- Create: `01_share-resources/scripts/04_create-main-app-subnet.sh`
+- Create: `01_share-resources/scripts/05_create-private-services-access.sh`
+- Create: `01_share-resources/scripts/06_create-router-nat.sh`
+- Modify: `01_share-resources/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -188,7 +188,7 @@
 
 - [x] **Step 6: Run verification**
 
-  Run `bash 02_network/tests/scripts.sh`, `bash -n 02_network/scripts/*.sh`, and `git diff --check`. Do not execute the scripts against GCP in automated verification.
+  Run `bash 01_share-resources/tests/scripts.sh`, `bash -n 01_share-resources/scripts/*.sh`, and `git diff --check`. Do not execute the scripts against GCP in automated verification.
 
 ---
 
@@ -196,9 +196,9 @@
 
 **Files:**
 
-- Create: `03_cloudsql/scripts/02_create-postgres-instance.sh`
-- Create: `03_cloudsql/scripts/03_create-postgres-database-users.sh`
-- Modify: `03_cloudsql/tests/scripts.sh`
+- Create: `02_main-app/scripts/02_create-postgres-instance.sh`
+- Create: `02_main-app/scripts/03_create-postgres-database-users.sh`
+- Modify: `02_main-app/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -223,7 +223,7 @@
 
 - [x] **Step 5: Run verification**
 
-  Run `bash 03_cloudsql/tests/scripts.sh`, `bash -n 03_cloudsql/scripts/*.sh`, and `git diff --check`.
+  Run `bash 02_main-app/tests/scripts.sh`, `bash -n 02_main-app/scripts/*.sh`, and `git diff --check`.
 
 ---
 
@@ -231,9 +231,9 @@
 
 **Files:**
 
-- Create: `04_secrets/scripts/02_setup-service-accounts.sh`
-- Create: `04_secrets/scripts/03_setup-secrets.sh`
-- Modify: `04_secrets/tests/scripts.sh`
+- Create: `02_main-app/scripts/02_setup-service-accounts.sh`
+- Create: `02_main-app/scripts/03_setup-secrets.sh`
+- Modify: `02_main-app/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -262,7 +262,7 @@
 
 - [x] **Step 6: Run verification**
 
-  Run `bash 04_secrets/tests/scripts.sh`, `bash -n 04_secrets/scripts/*.sh`, and `git diff --check`.
+  Run `bash 02_main-app/tests/scripts.sh`, `bash -n 02_main-app/scripts/*.sh`, and `git diff --check`.
 
 ---
 
@@ -271,11 +271,11 @@
 **Files:**
 
 - Modify: `/Users/leadbest/Documents/Work/frozen-runner/cicd/prod/cloudbuild-deploy.yaml`
-- Create: `01_cloudbuild/deploy/scripts/02_setup-deploy-iam.sh`
-- Create: `01_cloudbuild/deploy/scripts/03_create-production-trigger.sh`
-- Create: `01_cloudbuild/deploy/scripts/04_run-production-deploy.sh`
-- Create: `01_cloudbuild/deploy/scripts/05_verify-deployment.sh`
-- Modify: `01_cloudbuild/deploy/tests/scripts.sh`
+- Create: `02_main-app/deploy/scripts/02_setup-deploy-iam.sh`
+- Create: `02_main-app/deploy/scripts/03_create-production-trigger.sh`
+- Create: `02_main-app/deploy/scripts/04_run-production-deploy.sh`
+- Create: `02_main-app/deploy/scripts/05_verify-deployment.sh`
+- Modify: `02_main-app/deploy/tests/scripts.sh`
 
 **Interfaces:**
 
@@ -308,7 +308,7 @@
 
 - [x] **Step 7: Run verification**
 
-  Run `bash 01_cloudbuild/deploy/tests/scripts.sh`, `bash -n 01_cloudbuild/deploy/scripts/*.sh`, sibling repo YAML validation, and `git diff --check` in both repositories.
+  Run `bash 02_main-app/deploy/tests/scripts.sh`, `bash -n 02_main-app/deploy/scripts/*.sh`, sibling repo YAML validation, and `git diff --check` in both repositories.
 
 ---
 
@@ -317,10 +317,10 @@
 **Files:**
 
 - Modify: `README.md`
-- Create: `02_network/README.md`
-- Create: `03_cloudsql/README.md`
-- Create: `04_secrets/README.md`
-- Create: `01_cloudbuild/deploy/README.md`
+- Create: `01_share-resources/README.md`
+- Create: `02_main-app/README.md`
+- Create: `02_main-app/README.md`
+- Create: `02_main-app/deploy/README.md`
 
 - [x] **Step 1: Document module order**
 
@@ -336,7 +336,7 @@
 
 - [x] **Step 4: Run full local checks**
 
-  Run `bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_secrets/scripts/*.sh 01_cloudbuild/deploy/scripts/*.sh`, all module test scripts, and `git diff --check` in both repositories.
+  Run `bash -n 01_share-resources/scripts/*.sh 02_main-app/scripts/*.sh 02_main-app/scripts/*.sh 02_main-app/deploy/scripts/*.sh`, all module test scripts, and `git diff --check` in both repositories.
 
 - [x] **Step 5: Review external-operation boundary**
 
@@ -346,7 +346,7 @@
 
 ## Final Acceptance
 
-- [x] Every provisioning module has `env/env.sh`, `00_env.sh`, module-scoped `01_setup-exec-iam-account-role.sh`, and `99_remove-exec-iam-account-role.sh`; `01_cloudbuild/base` has the same setup/removal lifecycle, while `01_cloudbuild/build-image` remains a consumer of base.
+- [x] Every provisioning module has `env/env.sh`, `00_env.sh`, module-scoped `01_setup-exec-iam-account-role.sh`, and `99_remove-exec-iam-account-role.sh`; `02_main-app/base` has the same setup/removal lifecycle, while `02_main-app/build-image` remains a consumer of base.
 - [x] The existing `co-signer` provisioning role also has a scoped removal script, without provisioning any Co-Signer resource in this plan.
 - [x] All provisioning scripts target `GOOGLE_PROJECT_ID` and use `PROJECT_NAME` only for resource naming.
 - [x] Co-Signer resources and the existing Global Load Balancer are untouched.

@@ -22,22 +22,22 @@ frozen-runner-infra/
 │   │   └── README.md
 │   ├── build-image/             # GAR 與 image build triggers
 │   │   ├── scripts/
-│   │   │   ├── 00_create-ci-trigger.sh
-│   │   │   ├── 01_create-artifact-registry.sh
-│   │   │   ├── 02_create-release-trigger.sh
-│   │   │   ├── 03_run-release-trigger.sh
-│   │   │   ├── 04_verify-images.sh
-│   │   │   ├── 05_create-manual-release-trigger.sh
-│   │   │   └── 06_run-manual-release-trigger.sh
+│   │   │   ├── 05_create-ci-trigger.sh
+│   │   │   ├── 06_create-artifact-registry.sh
+│   │   │   ├── 07_create-release-trigger.sh
+│   │   │   ├── 08_run-release-trigger.sh
+│   │   │   ├── 09_verify-images.sh
+│   │   │   ├── 10_create-manual-release-trigger.sh
+│   │   │   └── 11_run-manual-release-trigger.sh
 │   │   └── README.md
 │   └── deploy/                  # production deploy trigger 與 verification
 │       ├── scripts/
 │       ├── tests/scripts.sh
 │       └── README.md
-├── 02_network/                  # VPC、subnet、Private Services Access、NAT
-├── 03_cloudsql/                 # private PostgreSQL instance、database、users
-├── 04_secrets/                 # runtime/deploy identities 與 secret metadata
-├── 05_co-signer/                # Safeheron Co-Signer VM、KMS 與 IAM
+├── 01_share-resources/                  # VPC、subnet、Private Services Access、NAT
+├── 02_main-app/                 # private PostgreSQL instance、database、users
+├── 02_main-app/                 # runtime/deploy identities 與 secret metadata
+├── 03_co-signer/                # Safeheron Co-Signer VM、KMS 與 IAM
 │   ├── scripts/
 │   │   ├── 00_env.sh           # 載入共用 active environment
 │   │   ├── 01_setup-exec-iam-account-role.sh
@@ -67,7 +67,7 @@ GOOGLE_PROJECT_REGION="YOUR_GCP_REGION"
 `dev|prod` 參數。Cloud Build 專用的 connection/repository metadata 則放在：
 
 ```text
-01_cloudbuild/base/scripts/env/env.sh
+02_main-app/scripts/env/env.sh
 ```
 
 ## 共用建立順序
@@ -80,10 +80,10 @@ README 為準。
 
 正式建立順序固定為：
 
-1. [`02_network/README.md`](02_network/README.md)
-2. [`03_cloudsql/README.md`](03_cloudsql/README.md)
-3. [`04_secrets/README.md`](04_secrets/README.md)
-4. [`01_cloudbuild/deploy/README.md`](01_cloudbuild/deploy/README.md)
+1. [`01_share-resources/README.md`](01_share-resources/README.md)
+2. [`02_main-app/README.md`](02_main-app/README.md)
+3. [`02_main-app/README.md`](02_main-app/README.md)
+4. [`02_main-app/README.md`](02_main-app/README.md)
 
 反向撤銷 custom provisioning role 的順序為 deploy、main-app、Cloud SQL、
 network，各執行對應的 `scripts/99_remove-exec-iam-account-role.sh`。這些
@@ -93,23 +93,23 @@ runtime/deploy identities 或已建立的資源；撤銷後可用 IAM policy 檢
 
 ### Cloud Build
 
-先依 [`01_cloudbuild/base/README.md`](01_cloudbuild/base/README.md) 的實際順序執行
+先依 [`02_main-app/README.md`](02_main-app/README.md) 的實際順序執行
 `00_env.sh` 載入設定、`01_setup-exec-iam-account-role.sh`、`02_enable-apis.sh`、
 `03_setup-cloud-build-iam.sh`，以及需要時的
 `04_setup-github-connection.sh`，建立必要 API、Cloud Build service account 與
 GitHub connection/repository metadata。再閱讀
-[`01_cloudbuild/build-image/README.md`](01_cloudbuild/build-image/README.md)，建立 GAR、
+[`02_main-app/README.md`](02_main-app/README.md)，建立 GAR、
 CI trigger、automatic `v*` release trigger，或手動指定如 `v0.1.0-pre` 的 image build
 trigger。CI trigger 可用以下命令建立或確認：
 
 ```bash
-bash 01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh
-bash 01_cloudbuild/base/scripts/02_enable-apis.sh
-bash 01_cloudbuild/base/scripts/03_setup-cloud-build-iam.sh
-bash 01_cloudbuild/base/scripts/04_setup-github-connection.sh \
+bash 02_main-app/scripts/01_setup-exec-iam-account-role.sh
+bash 02_main-app/scripts/02_enable-apis.sh
+bash 02_main-app/scripts/03_setup-cloud-build-iam.sh
+bash 02_main-app/scripts/04_setup-github-connection.sh \
   CONNECTION_NAME REPOSITORY_NAME \
   https://github.com/GITHUB_OWNER/GITHUB_REPOSITORY.git
-bash 01_cloudbuild/build-image/scripts/00_create-ci-trigger.sh
+  bash 02_main-app/scripts/05_create-ci-trigger.sh
 ```
 
 Cloud Build image pipeline 只負責建立與 push app/migration image，不負責 Cloud Run
@@ -117,12 +117,12 @@ deploy、database migration 或 Co-Signer VM activation。
 
 ### Co-Signer
 
-`05_co-signer/` 依 Safeheron 官方流程建立每個 Co-Signer 所需的 IAM、KMS 與 VM。執行
-方式請看 [`05_co-signer/README.md`](05_co-signer/README.md)。Pairing Token、`.env`、
+`03_co-signer/` 依 Safeheron 官方流程建立每個 Co-Signer 所需的 IAM、KMS 與 VM。執行
+方式請看 [`03_co-signer/README.md`](03_co-signer/README.md)。Pairing Token、`.env`、
 Safeheron activation 與 start/setup 不會寫入 Git 或由 Cloud Build 管理。
 
 本計畫不建立或啟用 Co-Signer 資源；既有的
-`05_co-signer/scripts/99_remove-exec-iam-account-role.sh` 仍可在需要時執行，
+`03_co-signer/scripts/99_remove-exec-iam-account-role.sh` 仍可在需要時執行，
 只撤銷既有 Co-Signer provisioning role binding。cleanup 不刪除未知人員的 roles，
 也不建立 Co-Signer resource。
 
@@ -132,12 +132,12 @@ Safeheron activation 與 start/setup 不會寫入 Git 或由 Cloud Build 管理�
 資源、不刪除 runtime/deploy service account，也不刪除未知人員的 roles：
 
 ```bash
-bash 02_network/scripts/99_remove-exec-iam-account-role.sh
-bash 03_cloudsql/scripts/99_remove-exec-iam-account-role.sh
-bash 04_secrets/scripts/99_remove-exec-iam-account-role.sh
-bash 01_cloudbuild/base/scripts/99_remove-exec-iam-account-role.sh
-bash 01_cloudbuild/deploy/scripts/99_remove-exec-iam-account-role.sh
-bash 05_co-signer/scripts/99_remove-exec-iam-account-role.sh
+bash 01_share-resources/scripts/99_remove-exec-iam-account-role.sh
+bash 02_main-app/scripts/99_remove-exec-iam-account-role.sh
+bash 02_main-app/scripts/99_remove-exec-iam-account-role.sh
+bash 02_main-app/scripts/99_remove-exec-iam-account-role.sh
+bash 02_main-app/scripts/99_remove-exec-iam-account-role.sh
+bash 03_co-signer/scripts/99_remove-exec-iam-account-role.sh
 ```
 
 最後一支是 Co-Signer 的 revoke-only cleanup；本 repo 不建立 Co-Signer resource。
@@ -148,15 +148,15 @@ bash 05_co-signer/scripts/99_remove-exec-iam-account-role.sh
 不會宣稱或驗證 live GCP resource 已建立：
 
 ```bash
-bash 02_network/tests/scripts.sh
-bash 03_cloudsql/tests/scripts.sh
-bash 04_secrets/tests/scripts.sh
-bash 01_cloudbuild/base/tests/scripts.sh
-bash 01_cloudbuild/deploy/tests/scripts.sh
-bash 05_co-signer/tests/scripts.sh
-bash -n 02_network/scripts/*.sh 03_cloudsql/scripts/*.sh 04_secrets/scripts/*.sh \
-  01_cloudbuild/base/scripts/*.sh 01_cloudbuild/deploy/scripts/*.sh \
-  01_cloudbuild/build-image/scripts/*.sh 05_co-signer/scripts/*.sh
+bash 01_share-resources/tests/scripts.sh
+bash 02_main-app/tests/scripts.sh
+bash 02_main-app/tests/scripts.sh
+bash 02_main-app/tests/scripts.sh
+bash 02_main-app/tests/scripts.sh
+bash 03_co-signer/tests/scripts.sh
+bash -n 01_share-resources/scripts/*.sh 02_main-app/scripts/*.sh 02_main-app/scripts/*.sh \
+  02_main-app/scripts/*.sh 02_main-app/scripts/*.sh \
+  02_main-app/scripts/*.sh 03_co-signer/scripts/*.sh
 ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' \
   $(git ls-files '*.yaml' '*.yml')
 git diff --check
