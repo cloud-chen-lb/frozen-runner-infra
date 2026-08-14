@@ -1,4 +1,4 @@
-# 主應用程式模組的非機密設定。密碼與 secret value 不得放在本檔。
+# 主應用程式模組的所有非機密設定與 mapping。密碼與 secret value 不得放在本檔。
 CLOUD_BUILD_CONNECTION_NAME="Github_Connect"
 CLOUD_BUILD_REPOSITORY_NAME="echox-project-frozen-runner"
 

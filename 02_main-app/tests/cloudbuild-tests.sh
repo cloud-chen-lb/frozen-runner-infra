@@ -15,7 +15,6 @@ test_global_env_wins_and_cloud_build_metadata_loads() {
 
   mkdir -p "${temp_dir}/02_main-app/scripts/env" "${temp_dir}/global-env"
   cp "${LOADER}" "${temp_dir}/02_main-app/scripts/00_env.sh"
-  cp "${ROOT_DIR}/02_main-app/scripts/secrets.env.sh" "${temp_dir}/02_main-app/scripts/secrets.env.sh"
 
   cat >"${temp_dir}/global-env/env.sh" <<'EOF'
 PROJECT_NAME=global-project

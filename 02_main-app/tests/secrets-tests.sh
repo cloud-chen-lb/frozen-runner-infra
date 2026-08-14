@@ -31,6 +31,9 @@ POSTGRES_EDITION=ENTERPRISE
 POSTGRES_CPU=1
 POSTGRES_MEMORY_MB=3840
 POSTGRES_STORAGE_GB=20
+APP_SERVICE_ACCOUNT_NAME=cb-frozen-runner-mini
+MIGRATION_SERVICE_ACCOUNT_NAME=cb-frozen-runner-migration
+DEPLOY_SERVICE_ACCOUNT_NAME=cb-frozen-runner-deploy
 EOF
   cat >"${temp_dir}/gcloud" <<EOF
 #!/usr/bin/env bash
