@@ -6,18 +6,15 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/00_env.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/02_create-mysql-instance.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/03_create-cloud-kms-keyring.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_print-merchant-co-signer-env.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh" ]]
-  [[ -x "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh" ]]
+  [[ -x "${ROOT_DIR}/03_co-signer/scripts/02_create-cosigner-subnet.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/03_create-mysql-instance.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/04_create-cloud-kms-keyring.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_create-mysql-database-user.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_print-merchant-co-signer-env.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/08_create-vm.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/00_mysql_env.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/02_create-cloud-kms.sh" ]]
-  [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh" ]]
-  [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/03_create-vm.sh" ]]
-  [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/04_create-mysql-instance.sh" ]]
   source "${ROOT_DIR}/global-env/env.sh"
   source "${ROOT_DIR}/03_co-signer/scripts/env/env.sh"
   [[ "${KMS_KEYRING}" == "frozen-runner-kms" ]]
@@ -34,19 +31,19 @@ test_script_layout_and_safety() {
 
 test_merchant_argument_and_env_validation() {
   local output
-  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" </dev/null 2>&1)"; then
+  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh" </dev/null 2>&1)"; then
     return 1
   fi
   [[ "${output}" == *"Usage:"* ]]
-  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" Bad </dev/null 2>&1)"; then
+  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh" Bad </dev/null 2>&1)"; then
     return 1
   fi
   [[ "${output}" == *"valid merchant slug"* ]]
-  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" missing </dev/null 2>&1)"; then
+  if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh" missing </dev/null 2>&1)"; then
     return 1
   fi
   [[ "${output}" == *"env-merchant-missing.sh"* ]]
-  for script in 05_create-mysql-database-user.sh 06_print-merchant-co-signer-env.sh 07_create-vm.sh; do
+  for script in 06_create-mysql-database-user.sh 07_print-merchant-co-signer-env.sh 08_create-vm.sh; do
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" Bad </dev/null 2>&1)"; then
       return 1
     fi
@@ -80,12 +77,12 @@ fi
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/02_create-cosigner-subnet.sh"
   grep -F 'compute networks subnets create frozen-runner-cosigner-subnet' "${log}"
 
   : >"${log}"
   SUBNET_STATE=matching PATH="${temp_dir}:${PATH}" \
-    bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"
+    bash "${ROOT_DIR}/03_co-signer/scripts/02_create-cosigner-subnet.sh"
   ! grep -F 'compute networks subnets create' "${log}"
 
   for drift in cidr network region; do
@@ -97,7 +94,7 @@ EOF
     esac
     if SUBNET_STATE=drift DRIFT_CIDR="${DRIFT_CIDR}" DRIFT_NETWORK="${DRIFT_NETWORK}" \
       DRIFT_REGION="${DRIFT_REGION}" PATH="${temp_dir}:${PATH}" \
-      bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"; then
+      bash "${ROOT_DIR}/03_co-signer/scripts/02_create-cosigner-subnet.sh"; then
       printf 'Expected Co-Signer subnet %s drift to fail\n' "${drift}" >&2
       return 1
     fi
@@ -117,7 +114,7 @@ printf '%s\n' "\$*" >>"${log}"
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" echox
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh" echox
   grep -F 'kms keys add-iam-policy-binding frozen-runner-echox-cosigner-kms-key' "${log}"
   grep -F -- '--member=serviceAccount:echox-cosigner-sa@echox-project.iam.gserviceaccount.com' "${log}"
   ! grep -F 'frozen-runner-other' "${log}"
@@ -169,23 +166,23 @@ EOF
 
 test_mysql_backup_flags_match_mysql_api() {
   ! grep -F -- '--enable-point-in-time-recovery' \
-    "${ROOT_DIR}/03_co-signer/scripts/02_create-mysql-instance.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/03_create-mysql-instance.sh"
   grep -F -- '--enable-bin-log' \
-    "${ROOT_DIR}/03_co-signer/scripts/02_create-mysql-instance.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/03_create-mysql-instance.sh"
 }
 
 test_merchant_kms_is_rerunnable_after_account_creation() {
   grep -F -- 'iam service-accounts describe' \
-    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh"
   grep -F -- 'kms keys describe' \
-    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh"
   grep -F -- 'Timed out waiting for service account propagation' \
-    "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/05_create-merchant-cloud-kms.sh"
 }
 
 test_vm_is_rerunnable_after_ip_creation() {
   grep -F -- 'compute addresses describe' \
-    "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/08_create-vm.sh"
 }
 
 test_merchant_database_info_outputs_expected_values() {
@@ -201,7 +198,7 @@ fi
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/06_print-merchant-co-signer-env.sh" echox)"
+  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/07_print-merchant-co-signer-env.sh" echox)"
   [[ "${output}" == $'PAIRING_TOKEN="{PAIRING-TOKEN}"\nCONFIG_MODE="LOCAL_FILE"\nMYSQL_URL="jdbc:mysql://10.0.0.5:3306/cosigner_echox?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&useSSL=true&allowPublicKeyRetrieval=true"\nMYSQL_USER="cosigner_echox_user"\nMYSQL_PASSWORD="{MYSQL-PASSWORD}"\nKMS_TYPE="GCPKMS"\nGOOGLE_PROJECT="echox-project"\nGOOGLE_REGION="asia-east1"\nGOOGLE_KEYRING="frozen-runner-kms"\nGOOGLE_CRYPTO_KEY="frozen-runner-echox-cosigner-kms-key"\nCALLBACK_VERSION="v3"' ]]
 }
 

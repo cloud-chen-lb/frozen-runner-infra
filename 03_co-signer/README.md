@@ -27,29 +27,29 @@ VM_VPC_NETWORK="frozen-runner-cosigner-subnet"
 ## 建立流程
 
 先由 `01_share-resources` 準備 shared VPC 與 Private Services Access，再執行本模組
-的 `08_create-cosigner-subnet.sh` 建立或驗證 Co-Signer subnet。以下資源只需執行一次：
+的建立流程。以下資源只需執行一次：
 
 ```bash
 bash 03_co-signer/scripts/01_setup-exec-iam-account-role.sh
-bash 03_co-signer/scripts/02_create-mysql-instance.sh
-bash 03_co-signer/scripts/03_create-cloud-kms-keyring.sh
-bash 03_co-signer/scripts/08_create-cosigner-subnet.sh
+bash 03_co-signer/scripts/02_create-cosigner-subnet.sh
+bash 03_co-signer/scripts/03_create-mysql-instance.sh
+bash 03_co-signer/scripts/04_create-cloud-kms-keyring.sh
 ```
 
 接著將 `echox` 替換成實際商戶 slug，逐一執行：
 
 ```bash
-bash 03_co-signer/scripts/04_create-merchant-cloud-kms.sh echox
-bash 03_co-signer/scripts/05_create-mysql-database-user.sh echox
-bash 03_co-signer/scripts/06_print-merchant-co-signer-env.sh echox \
+bash 03_co-signer/scripts/05_create-merchant-cloud-kms.sh echox
+bash 03_co-signer/scripts/06_create-mysql-database-user.sh echox
+bash 03_co-signer/scripts/07_print-merchant-co-signer-env.sh echox \
   > 03_co-signer/co-signer.env
-bash 03_co-signer/scripts/07_create-vm.sh echox
+bash 03_co-signer/scripts/08_create-vm.sh echox
 ```
 
-`05_create-mysql-database-user.sh` 建立資料庫與 user。若 user 尚未存在，
+`06_create-mysql-database-user.sh` 建立資料庫與 user。若 user 尚未存在，
 腳本會從終端機或 stdin 讀取 MySQL password，不會將 password 寫入 Git。
 
-`06_print-merchant-co-signer-env.sh` 會輸出完整的 `co-signer.env` 格式，
+`07_print-merchant-co-signer-env.sh` 會輸出完整的 `co-signer.env` 格式，
 自動填入 Cloud SQL private IP、資料庫名稱、user、GCP project、region 與商戶 KMS key。
 輸出中的 `PAIRING_TOKEN` 與 `MYSQL_PASSWORD` 會保留佔位符，請手動填入：
 
@@ -58,7 +58,7 @@ PAIRING_TOKEN="{PAIRING-TOKEN}"
 MYSQL_PASSWORD="{MYSQL-PASSWORD}"
 ```
 
-`07_create-vm.sh` 建立商戶專屬 VM 與 reserved static IP。VM 建立完成後，
+`08_create-vm.sh` 建立商戶專屬 VM 與 reserved static IP。VM 建立完成後，
 可使用該 static public IP 設定 Safeheron 的 IP allowlist。
 
 ## 安全注意事項

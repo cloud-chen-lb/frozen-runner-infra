@@ -100,7 +100,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   for script in 02_enable-apis.sh 03_create-vpc.sh \
-    05_create-private-services-access.sh; do
+    04_create-private-services-access.sh; do
     if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
       MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/01_share-resources/scripts/${script}"; then
       printf 'Expected %s to reject invalid input\n' "${script}" >&2
@@ -127,7 +127,7 @@ exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
   for script in 02_enable-apis.sh 03_create-vpc.sh \
-    05_create-private-services-access.sh; do
+    04_create-private-services-access.sh; do
     PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_share-resources/scripts/${script}"
   done
   grep -F 'compute networks create frozen-runner-vpc' "${log}"
@@ -208,7 +208,7 @@ EOF
     esac
     if PSA_IP="${PSA_IP:-10.30.0.0}" PSA_PREFIX="${PSA_PREFIX:-16}" PSA_PURPOSE="${PSA_PURPOSE:-VPC_PEERING}" \
       PSA_NETWORK="${PSA_NETWORK:-frozen-runner-vpc}" PSA_PEERING_RANGE="${PSA_PEERING_RANGE:-frozen-runner-private-services-range}" \
-      PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_share-resources/scripts/05_create-private-services-access.sh"; then
+      PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_share-resources/scripts/04_create-private-services-access.sh"; then
       printf 'Expected private services access %s drift to fail\n' "${drift_case}" >&2
       return 1
     fi

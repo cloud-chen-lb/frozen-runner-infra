@@ -41,9 +41,13 @@ frozen-runner-infra/
 │   ├── scripts/
 │   │   ├── 00_env.sh           # 載入共用 active environment
 │   │   ├── 01_setup-exec-iam-account-role.sh
-│   │   ├── 02_create-cloud-kms.sh
-│   │   ├── 06_print-merchant-co-signer-env.sh
-│   │   └── 07_create-vm.sh
+│   │   ├── 02_create-cosigner-subnet.sh
+│   │   ├── 03_create-mysql-instance.sh
+│   │   ├── 04_create-cloud-kms-keyring.sh
+│   │   ├── 05_create-merchant-cloud-kms.sh
+│   │   ├── 06_create-mysql-database-user.sh
+│   │   ├── 07_print-merchant-co-signer-env.sh
+│   │   └── 08_create-vm.sh
 │   └── README.md
 └── README.md                   # Repo 架構與使用說明
 ```

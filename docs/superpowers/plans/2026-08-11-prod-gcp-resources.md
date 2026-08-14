@@ -40,7 +40,7 @@
 - `01_share-resources/scripts/02_enable-apis.sh`
 - `01_share-resources/scripts/03_create-vpc.sh`
 - `02_main-app/scripts/12_create-main-app-subnet.sh`
-- `01_share-resources/scripts/05_create-private-services-access.sh`
+- `01_share-resources/scripts/04_create-private-services-access.sh`
 - `01_share-resources/scripts/06_create-router-nat.sh`
 - `01_share-resources/scripts/99_remove-exec-iam-account-role.sh`
 - `01_share-resources/tests/scripts.sh`
@@ -157,7 +157,7 @@
 - Create: `01_share-resources/scripts/02_enable-apis.sh`
 - Create: `01_share-resources/scripts/03_create-vpc.sh`
 - Create: `02_main-app/scripts/12_create-main-app-subnet.sh`
-- Create: `01_share-resources/scripts/05_create-private-services-access.sh`
+- Create: `01_share-resources/scripts/04_create-private-services-access.sh`
 - Create: `01_share-resources/scripts/06_create-router-nat.sh`
 - Modify: `01_share-resources/tests/scripts.sh`
 

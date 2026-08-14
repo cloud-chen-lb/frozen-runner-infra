@@ -337,7 +337,7 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/04_create-mysql-instance.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/03_create-mysql-instance.sh"
   grep -F 'sql instances create frozen-runner-cosigner-mysql' "${log}"
   grep -F -- '--database-version=MYSQL_8_0' "${log}"
   grep -F -- '--network=frozen-runner-vpc' "${log}"
@@ -358,7 +358,7 @@ esac
 EOF
   chmod +x "${temp_dir}/gcloud"
   printf 'merchant-password\n' | PATH="${temp_dir}:${PATH}" \
-    bash "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" --merchant-slug=acme
+    bash "${ROOT_DIR}/03_co-signer/scripts/06_create-mysql-database-user.sh" --merchant-slug=acme
   grep -F 'sql databases create cosigner_acme' "${log}"
   grep -F 'sql users create cosigner_acme_user' "${log}"
   [[ "$(grep -n 'sql databases create' "${log}" | cut -d: -f1)" -lt \
@@ -367,7 +367,7 @@ EOF
 }
 
 test_mysql_merchant_slug_is_required() {
-  if bash "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" </dev/null; then
+  if bash "${ROOT_DIR}/03_co-signer/scripts/06_create-mysql-database-user.sh" </dev/null; then
     printf 'Expected merchant slug to be required\n' >&2
     return 1
   fi

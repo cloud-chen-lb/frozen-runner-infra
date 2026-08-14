@@ -22,7 +22,7 @@ naming。
 bash 01_share-resources/scripts/01_setup-exec-iam-account-role.sh
 bash 01_share-resources/scripts/02_enable-apis.sh
 bash 01_share-resources/scripts/03_create-vpc.sh
-bash 01_share-resources/scripts/05_create-private-services-access.sh
+bash 01_share-resources/scripts/04_create-private-services-access.sh
 bash 02_main-app/scripts/13_create-router-nat.sh
 ```
 
