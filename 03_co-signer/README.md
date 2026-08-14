@@ -44,6 +44,9 @@ bash 03_co-signer/scripts/06_create-mysql-database-user.sh echox
 bash 03_co-signer/scripts/07_print-merchant-co-signer-env.sh echox \
   > 03_co-signer/co-signer.env
 bash 03_co-signer/scripts/08_create-vm.sh echox
+bash 03_co-signer/scripts/09_add-vm-ssh-key.sh echox
+# 安裝 Safeheron Co-Signer 後移除臨時 SSH key
+bash 03_co-signer/scripts/10_remove-vm-ssh-key.sh echox
 ```
 
 `06_create-mysql-database-user.sh` 建立資料庫與 user。若 user 尚未存在，
@@ -60,6 +63,9 @@ MYSQL_PASSWORD="{MYSQL-PASSWORD}"
 
 `08_create-vm.sh` 建立商戶專屬 VM 與 reserved static IP。VM 建立完成後，
 可使用該 static public IP 設定 Safeheron 的 IP allowlist。
+`09_add-vm-ssh-key.sh` 僅將操作者的 `${HOME}/.ssh/id_rsa.pub` 加到指定商戶 VM，
+供安裝 Safeheron Co-Signer 的臨時 SSH 存取；安裝完成後務必執行
+`10_remove-vm-ssh-key.sh`，該腳本只移除相同的 key。
 
 ## 安全注意事項
 

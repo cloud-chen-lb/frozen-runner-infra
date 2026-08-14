@@ -13,6 +13,8 @@ test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_create-mysql-database-user.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_print-merchant-co-signer-env.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/08_create-vm.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/09_add-vm-ssh-key.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/10_remove-vm-ssh-key.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/00_mysql_env.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/02_create-cloud-kms.sh" ]]
   source "${ROOT_DIR}/global-env/env.sh"
@@ -43,7 +45,8 @@ test_merchant_argument_and_env_validation() {
     return 1
   fi
   [[ "${output}" == *"env-merchant-missing.sh"* ]]
-  for script in 06_create-mysql-database-user.sh 07_print-merchant-co-signer-env.sh 08_create-vm.sh; do
+  for script in 06_create-mysql-database-user.sh 07_print-merchant-co-signer-env.sh 08_create-vm.sh \
+    09_add-vm-ssh-key.sh 10_remove-vm-ssh-key.sh; do
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" Bad </dev/null 2>&1)"; then
       return 1
     fi
@@ -53,6 +56,70 @@ test_merchant_argument_and_env_validation() {
     fi
     [[ "${output}" == *"env-merchant-missing.sh"* ]]
   done
+}
+
+test_vm_ssh_key_is_instance_scoped_and_non_destructive() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  mkdir -p "${temp_dir}/home/.ssh"
+  printf 'ssh-rsa AAAAoperator operator@host\n' >"${temp_dir}/home/.ssh/id_rsa.pub"
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GCLOUD_LOG}"
+for argument in "$@"; do
+  if [[ "${argument}" == --metadata-from-file=ssh-keys=* ]]; then
+    printf 'metadata=%s\n' "$(<"${argument##*=}")" >>"${GCLOUD_LOG}"
+  fi
+done
+if [[ "$*" == *"instances describe"* ]]; then
+  printf '%s\n' "${GCLOUD_METADATA}"
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
+    GCLOUD_METADATA='ssh-rsa AAAAother other@host' PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/09_add-vm-ssh-key.sh" echox
+  grep -F -- 'compute instances describe frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a' "${log}"
+  grep -F -- 'compute instances add-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --metadata-from-file=ssh-keys=' "${log}"
+  grep -F -- $'metadata=ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host' "${log}"
+  ! grep -F -- 'projects add-metadata' "${log}"
+
+  : >"${log}"
+  HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
+    GCLOUD_METADATA=$'ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host' \
+    PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/10_remove-vm-ssh-key.sh" echox
+  grep -F -- 'compute instances add-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --metadata-from-file=ssh-keys=' "${log}"
+  grep -F -- 'metadata=ssh-rsa AAAAother other@host' "${log}"
+  ! grep -F -- 'metadata=ssh-rsa AAAAoperator operator@host' "${log}"
+  ! grep -F -- 'compute instances remove-metadata' "${log}"
+  ! grep -F -- 'frozen-runner-other' "${log}"
+}
+
+test_vm_ssh_key_removal_clears_only_key() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  mkdir -p "${temp_dir}/home/.ssh"
+  printf 'ssh-rsa AAAAoperator operator@host\n' >"${temp_dir}/home/.ssh/id_rsa.pub"
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GCLOUD_LOG}"
+if [[ "$*" == *"instances describe"* ]]; then
+  printf '%s\n' "${GCLOUD_METADATA}"
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
+    GCLOUD_METADATA='ssh-rsa AAAAoperator operator@host' PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/10_remove-vm-ssh-key.sh" echox
+  grep -F -- 'compute instances remove-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --keys=ssh-keys' "${log}"
+  ! grep -F -- 'compute instances add-metadata' "${log}"
 }
 
 test_cosigner_subnet_is_created_verified_and_rejects_drift() {
@@ -204,6 +271,8 @@ EOF
 
 test_script_layout_and_safety
 test_merchant_argument_and_env_validation
+test_vm_ssh_key_is_instance_scoped_and_non_destructive
+test_vm_ssh_key_removal_clears_only_key
 test_cosigner_subnet_is_created_verified_and_rejects_drift
 test_merchant_kms_is_scoped_to_merchant
 test_role_removal_uses_shared_env
