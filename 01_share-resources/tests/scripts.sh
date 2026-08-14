@@ -222,7 +222,7 @@ EOF
       network) ROUTER_NETWORK=wrong-vpc ;;
     esac
     if ROUTER_REGION="${ROUTER_REGION:-asia-east1}" ROUTER_NETWORK="${ROUTER_NETWORK:-frozen-runner-vpc}" \
-      PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/17_create-router-nat.sh"; then
+      PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/13_create-router-nat.sh"; then
       printf 'Expected Cloud Router %s drift to fail\n' "${drift_case}" >&2
       return 1
     fi
@@ -273,14 +273,14 @@ EOF
 
   for drift_case in address-type address-region nat-ip nat-subnet; do
     if DRIFT_CASE="${drift_case}" PATH="${temp_dir}:${PATH}" \
-      bash "${ROOT_DIR}/02_main-app/scripts/17_create-router-nat.sh"; then
+      bash "${ROOT_DIR}/02_main-app/scripts/13_create-router-nat.sh"; then
       printf 'Expected %s drift to fail\n' "${drift_case}" >&2
       return 1
     fi
   done
 
   if NAT_IP_ALLOCATE_OPTION=AUTO_ONLY PATH="${temp_dir}:${PATH}" \
-    bash "${ROOT_DIR}/02_main-app/scripts/17_create-router-nat.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/13_create-router-nat.sh"; then
     printf 'Expected NAT allocation option drift to fail\n' >&2
     return 1
   fi

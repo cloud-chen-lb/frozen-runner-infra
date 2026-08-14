@@ -27,7 +27,7 @@ bash 01_share-resources/scripts/03_create-vpc.sh
 bash 01_share-resources/scripts/04_create-main-app-subnet.sh
 bash 01_share-resources/scripts/05_create-cosigner-subnet.sh
 bash 01_share-resources/scripts/05_create-private-services-access.sh
-bash 02_main-app/scripts/17_create-router-nat.sh
+bash 02_main-app/scripts/13_create-router-nat.sh
 ```
 
 這些 scripts 會檢查既有資源契約與 drift；不符合時停止，不會直接覆寫。

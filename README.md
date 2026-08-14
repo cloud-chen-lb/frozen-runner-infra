@@ -42,7 +42,7 @@ frozen-runner-infra/
 │   │   ├── 00_env.sh           # 載入共用 active environment
 │   │   ├── 01_setup-exec-iam-account-role.sh
 │   │   ├── 02_create-cloud-kms.sh
-│   │   ├── 06_get-merchant-database-info.sh
+│   │   ├── 06_print-merchant-co-signer-env.sh
 │   │   └── 07_create-vm.sh
 │   └── README.md
 └── README.md                   # Repo 架構與使用說明
@@ -110,7 +110,7 @@ bash 02_main-app/scripts/03_setup-cloud-build-iam.sh
 bash 02_main-app/scripts/04_setup-github-connection.sh \
   CONNECTION_NAME REPOSITORY_NAME \
   https://github.com/GITHUB_OWNER/GITHUB_REPOSITORY.git
-  bash 02_main-app/scripts/05_create-ci-trigger.sh
+  bash 02_main-app/scripts/06_create-ci-trigger.sh
 ```
 
 Cloud Build image pipeline 只負責建立與 push app/migration image，不負責 Cloud Run

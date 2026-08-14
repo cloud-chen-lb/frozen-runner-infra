@@ -13,6 +13,8 @@ source "${MERCHANT_ENV_FILE}"
 database_name="cosigner_${MERCHANT_SLUG//-/_}"
 user_name="${database_name}_user"
 private_ip="$(gcloud sql instances describe "${MYSQL_INSTANCE_NAME}" --project="${GOOGLE_PROJECT_ID}" \
-  --format='value(ipAddresses[?type="PRIVATE"].ipAddress)')"
+  --format='value(ipAddresses[0].ipAddress)')"
 
-printf 'DATABASE_USER_NAME=%s\nDATABASE_PRIVATE_IP=%s\n' "${user_name}" "${private_ip}"
+printf 'PAIRING_TOKEN="{PAIRING-TOKEN}"\nCONFIG_MODE="LOCAL_FILE"\nMYSQL_URL="jdbc:mysql://%s:3306/%s?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&useSSL=true&allowPublicKeyRetrieval=true"\nMYSQL_USER="%s"\nMYSQL_PASSWORD="{MYSQL-PASSWORD}"\nKMS_TYPE="GCPKMS"\nGOOGLE_PROJECT="%s"\nGOOGLE_REGION="%s"\nGOOGLE_KEYRING="%s"\nGOOGLE_CRYPTO_KEY="%s-%s-cosigner-kms-key"\nCALLBACK_VERSION="v3"\n' \
+  "${private_ip}" "${database_name}" "${user_name}" "${GOOGLE_PROJECT_ID}" \
+  "${GOOGLE_PROJECT_REGION}" "${KMS_KEYRING}" "${PROJECT_NAME}" "${MERCHANT_SLUG}"

@@ -1,83 +1,76 @@
+# Safeheron Co-Signer
 
+本模組使用 `global-env/env.sh` 的 active GCP project 與 region，建立共用
+Cloud SQL、KMS keyring，以及每個商戶專屬的 KMS key、資料庫 user 和 Co-Signer VM。
 
-需要提供客戶資訊
+## 執行前設定
 
-- API Public Key 
-- frozen runner 服務的固定ip位址
-- Co-Signer Public Key
-- Co-Signer 的固定ip位址
-- Co-Signer Callback URL
-
-1. 先去 frozen-alert 開一組新的商戶 (需要frozen-runner服務對外固定ip 和 hook網址)
-2. 去 frozen-runner 建立商戶 並連結到 frozen-alert
-
-
-# Safeheron co-Signer 安裝
-
-本目錄使用 repo 共用的 `global-env/env.sh`。執行腳本前，先確認
-`PROJECT_NAME`、`GOOGLE_PROJECT_ID` 與 `GOOGLE_PROJECT_REGION` 已指向目前的 GCP project。
-每個商戶都必須有 `scripts/env/env-merchant-<merchant>.sh`；檔案可使用 shell 變數，但只放非機密資源設定。
-Pairing token、MySQL 密碼與其他 secret 不得放入 Git。
-
-先完成 `01_share-resources` 的 VPC、主系統 subnet、Co-Signer subnet 與 Private Services Access，再建立本 module 的共用資源，最後逐一建立商戶資源：
+確認 `global-env/env.sh` 至少包含：
 
 ```bash
-# 共用網路（只需執行一次）
-bash 01_share-resources/scripts/01_setup-exec-iam-account-role.sh
-bash 01_share-resources/scripts/02_enable-apis.sh
-bash 01_share-resources/scripts/03_create-vpc.sh
-bash 01_share-resources/scripts/04_create-main-app-subnet.sh
-bash 01_share-resources/scripts/05_create-cosigner-subnet.sh
-bash 01_share-resources/scripts/05_create-private-services-access.sh
+PROJECT_NAME="frozen-runner"
+GOOGLE_PROJECT_ID="your-gcp-project"
+GOOGLE_PROJECT_REGION="asia-east1"
+EXEC_IAM_ACCOUNT="your-account@example.com"
+```
 
-# Co-Signer 共用資源（只需執行一次）
+每個商戶需要建立 `scripts/env/env-merchant-<merchant>.sh`，例如：
+
+```bash
+VM_ZONE="asia-east1-a"
+VM_MACHINE_TYPE="e2-medium"
+VM_VPC_NETWORK="frozen-runner-cosigner-subnet"
+```
+
+`<merchant>` 必須是小寫英數字與連字號組成，且以小寫字母開頭，例如 `echox`。
+
+## 建立流程
+
+先完成 `01_share-resources` 的 VPC、Co-Signer subnet 與 Private Services Access。
+以下兩支是 Co-Signer 共用資源，只需執行一次：
+
+```bash
 bash 03_co-signer/scripts/01_setup-exec-iam-account-role.sh
 bash 03_co-signer/scripts/02_create-mysql-instance.sh
 bash 03_co-signer/scripts/03_create-cloud-kms-keyring.sh
-
-# 將 acme 替換成 scripts/env/env-merchant-<merchant>.sh 的 merchant slug
-bash 03_co-signer/scripts/04_create-merchant-cloud-kms.sh acme
-bash 03_co-signer/scripts/05_create-mysql-database-user.sh acme
-bash 03_co-signer/scripts/06_get-merchant-database-info.sh acme
-bash 03_co-signer/scripts/07_create-vm.sh acme
 ```
 
-`02_create-mysql-instance.sh` 與 `03_create-cloud-kms-keyring.sh` 只需執行一次。
-商戶流程建立該商戶專屬的 KMS key、service account、database/user、VM 與 reserved static IP。
+接著將 `echox` 替換成實際商戶 slug，逐一執行：
 
-## 產生 API Key
-
-```sh
-# 產生私鑰
-openssl genpkey -out api_private.pem -algorithm RSA -pkeyopt rsa_keygen_bits:4096
-
-# 從私鑰產生公鑰
-openssl rsa -in api_private.pem -out api_public.pem -pubout
+```bash
+bash 03_co-signer/scripts/04_create-merchant-cloud-kms.sh echox
+bash 03_co-signer/scripts/05_create-mysql-database-user.sh echox
+bash 03_co-signer/scripts/06_print-merchant-co-signer-env.sh echox \
+  > 03_co-signer/co-signer.env
+bash 03_co-signer/scripts/07_create-vm.sh echox
 ```
 
-01 ~ 03
+`05_create-mysql-database-user.sh` 建立資料庫與 user。若 user 尚未存在，
+腳本會從終端機或 stdin 讀取 MySQL password，不會將 password 寫入 Git。
 
-產生 callback key
+`06_print-merchant-co-signer-env.sh` 會輸出完整的 `co-signer.env` 格式，
+自動填入 Cloud SQL private IP、資料庫名稱、user、GCP project、region 與商戶 KMS key。
+輸出中的 `PAIRING_TOKEN` 與 `MYSQL_PASSWORD` 會保留佔位符，請手動填入：
 
-```sh
-# 產生私鑰
-openssl genpkey -out callback_handler_private.pem -algorithm RSA -pkeyopt rsa_keygen_bits:4096
-
-# 從私鑰產生公鑰
-openssl rsa -in callback_handler_private.pem -out callback_handler_public.pem -pubout
+```bash
+PAIRING_TOKEN="{PAIRING-TOKEN}"
+MYSQL_PASSWORD="{MYSQL-PASSWORD}"
 ```
 
-到 Safeheron 申請API Key
+`07_create-vm.sh` 建立商戶專屬 VM 與 reserved static IP。VM 建立完成後，
+可使用該 static public IP 設定 Safeheron 的 IP allowlist。
 
-增加API Key
+## 安全注意事項
 
-部署 API Co-Signer
-名稱: frozen-runner-co-signer-api
-ip白名單: `07_create-vm.sh` 建立完成以後的 public ip
-callback
-  - URL: {BASE_URL}/api/safeheron/03_co-signer/callback
-  - 公鑰: 貼入上面生成的公鑰
+- `co-signer.env` 是本機產生的 runtime 設定，已加入 `.gitignore`，不可提交。
+- Pairing token、MySQL password、private key 與 service-account JSON 不得放入 Git。
+- 執行前確認 `global-env/env.sh` 指向正確的 GCP project。
+- `scripts/env/env.sh` 與 `scripts/env/env-merchant-<merchant>.sh` 只放非機密資源設定。
 
+## 本地驗證
 
-
-sudo ./cosigner start --enable-mysql --config-file=/home/leadbest/safeheron/.env
+```bash
+bash 03_co-signer/tests/scripts.sh
+bash -n 03_co-signer/scripts/*.sh 03_co-signer/tests/scripts.sh
+git diff --check
+```

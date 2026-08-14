@@ -10,7 +10,7 @@ test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/03_create-cloud-kms-keyring.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_get-merchant-database-info.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_print-merchant-co-signer-env.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/00_mysql_env.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/02_create-cloud-kms.sh" ]]
@@ -26,9 +26,8 @@ test_script_layout_and_safety() {
   source "${ROOT_DIR}/03_co-signer/scripts/env/env-merchant-echox.sh"
   [[ "${VM_ZONE}" == "asia-east1-a" ]]
   [[ "${VM_MACHINE_TYPE}" == "e2-medium" ]]
-  [[ "${VM_VPC_NETWORK}" == "frozen-runner-cosigner-subnet" ]]
+  [[ "${VM_VPC_NETWORK}" == "${PROJECT_NAME}-cosigner-subnet" ]]
   ! grep -Eiq 'PAIRING_TOKEN|MYSQL_PASSWORD|PRIVATE KEY' \
-    "${ROOT_DIR}/03_co-signer/co-signer.env" \
     "${ROOT_DIR}/03_co-signer/scripts/env"/* 2>/dev/null
 }
 
@@ -46,7 +45,7 @@ test_merchant_argument_and_env_validation() {
     return 1
   fi
   [[ "${output}" == *"env-merchant-missing.sh"* ]]
-  for script in 05_create-mysql-database-user.sh 06_get-merchant-database-info.sh 07_create-vm.sh; do
+  for script in 05_create-mysql-database-user.sh 06_print-merchant-co-signer-env.sh 07_create-vm.sh; do
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" Bad </dev/null 2>&1)"; then
       return 1
     fi
@@ -143,13 +142,14 @@ test_merchant_database_info_outputs_expected_values() {
   cat >"${temp_dir}/gcloud" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$*" == *"sql instances describe"* ]]; then
+  [[ "$*" == *"--format=value(ipAddresses[0].ipAddress)"* ]] || exit 1
   printf '10.0.0.5\n'
 fi
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/06_get-merchant-database-info.sh" echox)"
-  [[ "${output}" == $'DATABASE_USER_NAME=cosigner_echox_user\nDATABASE_PRIVATE_IP=10.0.0.5' ]]
+  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/06_print-merchant-co-signer-env.sh" echox)"
+  [[ "${output}" == $'PAIRING_TOKEN="{PAIRING-TOKEN}"\nCONFIG_MODE="LOCAL_FILE"\nMYSQL_URL="jdbc:mysql://10.0.0.5:3306/cosigner_echox?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC&useSSL=true&allowPublicKeyRetrieval=true"\nMYSQL_USER="cosigner_echox_user"\nMYSQL_PASSWORD="{MYSQL-PASSWORD}"\nKMS_TYPE="GCPKMS"\nGOOGLE_PROJECT="echox-project"\nGOOGLE_REGION="asia-east1"\nGOOGLE_KEYRING="frozen-runner-kms"\nGOOGLE_CRYPTO_KEY="frozen-runner-echox-cosigner-kms-key"\nCALLBACK_VERSION="v3"' ]]
 }
 
 test_script_layout_and_safety
