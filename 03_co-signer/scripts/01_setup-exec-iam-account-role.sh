@@ -37,6 +37,9 @@ compute.instances.get,\
 compute.instances.list,\
 compute.instances.setMetadata,\
 compute.instances.setServiceAccount,\
+compute.firewalls.get,\
+compute.firewalls.create,\
+compute.firewalls.delete,\
 compute.disks.create,\
 compute.addresses.create,\
 compute.addresses.get,\
@@ -81,6 +84,9 @@ compute.instances.get,\
 compute.instances.list,\
 compute.instances.setMetadata,\
 compute.instances.setServiceAccount,\
+compute.firewalls.get,\
+compute.firewalls.create,\
+compute.firewalls.delete,\
 compute.disks.create,\
 compute.addresses.create,\
 compute.addresses.get,\

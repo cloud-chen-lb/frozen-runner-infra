@@ -5,3 +5,5 @@ VM_ZONE="asia-east1-a"
 VM_MACHINE_TYPE="e2-medium"
 # VM_VPC_NETWORK 是 VM 使用的 subnet 名稱；格式為 GCP subnet 資源名稱，應填該商戶 Co-Signer subnet。
 VM_VPC_NETWORK="${PROJECT_NAME}-cosigner-subnet"
+# VM_SSH_SOURCE_CIDR limits temporary SSH ingress to the operator network.
+VM_SSH_SOURCE_CIDR="203.0.113.0/24"

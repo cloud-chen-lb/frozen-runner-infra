@@ -16,6 +16,10 @@ MERCHANT_ENV_FILE="${SCRIPT_DIR}/env/env-merchant-${MERCHANT_SLUG}.sh"
 source "${MERCHANT_ENV_FILE}"
 
 [[ -n "${VM_ZONE:-}" ]] || { printf 'VM_ZONE is not configured\n' >&2; exit 1; }
+[[ -n "${VM_SSH_SOURCE_CIDR:-}" ]] || { printf 'VM_SSH_SOURCE_CIDR is not configured\n' >&2; exit 1; }
+[[ "${VM_SSH_SOURCE_CIDR}" != '0.0.0.0/0' && "${VM_SSH_SOURCE_CIDR}" != '::/0' ]] || {
+  printf 'VM_SSH_SOURCE_CIDR must not allow SSH from everywhere\n' >&2; exit 1;
+}
 
 PUBLIC_KEY_FILE="${HOME}/.ssh/id_rsa.pub"
 [[ -f "${PUBLIC_KEY_FILE}" ]] || {
@@ -28,6 +32,14 @@ PUBLIC_KEY="$(<"${PUBLIC_KEY_FILE}")"
 }
 
 VM_NAME="${PROJECT_NAME}-${MERCHANT_SLUG}-cosigner"
+FIREWALL_RULE_NAME="${PROJECT_NAME}-${MERCHANT_SLUG}-ssh-ingress"
+[[ "${FIREWALL_RULE_NAME}" =~ ^[a-z][a-z0-9-]{0,62}$ ]] || {
+  printf 'A safe firewall rule name could not be derived\n' >&2; exit 1;
+}
+if gcloud compute firewall-rules describe "${FIREWALL_RULE_NAME}" --project="${GOOGLE_PROJECT_ID}" \
+  >/dev/null 2>&1; then
+  gcloud compute firewall-rules delete "${FIREWALL_RULE_NAME}" --project="${GOOGLE_PROJECT_ID}" --quiet
+fi
 existing_metadata="$(gcloud compute instances describe "${VM_NAME}" --project="${GOOGLE_PROJECT_ID}" \
   --zone="${VM_ZONE}" --format='get(metadata.ssh-keys)')"
 if ! printf '%s\n' "${existing_metadata}" | awk -v key="${PUBLIC_KEY}" '$0 == key { found=1 } END { exit !found }'; then

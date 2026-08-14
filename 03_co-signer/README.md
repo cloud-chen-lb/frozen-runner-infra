@@ -20,6 +20,7 @@ EXEC_IAM_ACCOUNT="your-account@example.com"
 VM_ZONE="asia-east1-a"
 VM_MACHINE_TYPE="e2-medium"
 VM_VPC_NETWORK="frozen-runner-cosigner-subnet"
+VM_SSH_SOURCE_CIDR="203.0.113.0/24"
 ```
 
 `<merchant>` 必須是小寫英數字與連字號組成，且以小寫字母開頭，例如 `echox`。
@@ -63,9 +64,13 @@ MYSQL_PASSWORD="{MYSQL-PASSWORD}"
 
 `08_create-vm.sh` 建立商戶專屬 VM 與 reserved static IP。VM 建立完成後，
 可使用該 static public IP 設定 Safeheron 的 IP allowlist。
-`09_add-vm-ssh-key.sh` 僅將操作者的 `${HOME}/.ssh/id_rsa.pub` 加到指定商戶 VM，
-供安裝 Safeheron Co-Signer 的臨時 SSH 存取；安裝完成後務必執行
-`10_remove-vm-ssh-key.sh`，該腳本只移除相同的 key。
+`09_add-vm-ssh-key.sh` 會先建立每個 VM 專屬的 ingress firewall rule，只允許
+`${VM_SSH_SOURCE_CIDR}` 的 `tcp:22` 流量，並將操作者的 `${HOME}/.ssh/id_rsa.pub`
+加到指定商戶 VM。規則會鎖定 VM 現有的 service account，且重跑不會重複建立；即使 SSH
+metadata 已包含該 key，也會補建缺少的規則。安裝完成後務必執行
+`10_remove-vm-ssh-key.sh`，該腳本會移除相同規則與相同的 key，規則不存在時也不會失敗。
+
+`VM_SSH_SOURCE_CIDR` 必須設定為實際操作者網路的 CIDR，禁止使用 `0.0.0.0/0`。
 
 ## 安全注意事項
 
