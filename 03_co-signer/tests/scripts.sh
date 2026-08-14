@@ -10,9 +10,11 @@ test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/03_create-cloud-kms-keyring.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/04_create-merchant-cloud-kms.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" ]]
-  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_get-merchant-database-info.sh" ]]
+  [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/00_mysql_env.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/02_create-cloud-kms.sh" ]]
+  [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/03_create-vm.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/04_create-mysql-instance.sh" ]]
   source "${ROOT_DIR}/global-env/env.sh"
@@ -44,7 +46,7 @@ test_merchant_argument_and_env_validation() {
     return 1
   fi
   [[ "${output}" == *"env-merchant-missing.sh"* ]]
-  for script in 05_create-mysql-database-user.sh 06_create-vm.sh; do
+  for script in 05_create-mysql-database-user.sh 06_get-merchant-database-info.sh 07_create-vm.sh; do
     if output="$(bash "${ROOT_DIR}/03_co-signer/scripts/${script}" Bad </dev/null 2>&1)"; then
       return 1
     fi
@@ -131,7 +133,23 @@ test_merchant_kms_is_rerunnable_after_account_creation() {
 
 test_vm_is_rerunnable_after_ip_creation() {
   grep -F -- 'compute addresses describe' \
-    "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh"
+    "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh"
+}
+
+test_merchant_database_info_outputs_expected_values() {
+  local temp_dir output
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"sql instances describe"* ]]; then
+  printf '10.0.0.5\n'
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/06_get-merchant-database-info.sh" echox)"
+  [[ "${output}" == $'DATABASE_USER_NAME=cosigner_echox_user\nDATABASE_PRIVATE_IP=10.0.0.5' ]]
 }
 
 test_script_layout_and_safety
@@ -142,4 +160,5 @@ test_iam_permissions_have_no_leading_whitespace
 test_mysql_backup_flags_match_mysql_api
 test_merchant_kms_is_rerunnable_after_account_creation
 test_vm_is_rerunnable_after_ip_creation
+test_merchant_database_info_outputs_expected_values
 printf 'co-signer scripts tests passed\n'

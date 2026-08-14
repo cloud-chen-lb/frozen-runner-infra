@@ -42,7 +42,8 @@ frozen-runner-infra/
 │   │   ├── 00_env.sh           # 載入共用 active environment
 │   │   ├── 01_setup-exec-iam-account-role.sh
 │   │   ├── 02_create-cloud-kms.sh
-│   │   └── 03_create-vm.sh
+│   │   ├── 06_get-merchant-database-info.sh
+│   │   └── 07_create-vm.sh
 │   └── README.md
 └── README.md                   # Repo 架構與使用說明
 ```

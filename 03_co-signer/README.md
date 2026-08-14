@@ -38,7 +38,8 @@ bash 03_co-signer/scripts/03_create-cloud-kms-keyring.sh
 # 將 acme 替換成 scripts/env/env-merchant-<merchant>.sh 的 merchant slug
 bash 03_co-signer/scripts/04_create-merchant-cloud-kms.sh acme
 bash 03_co-signer/scripts/05_create-mysql-database-user.sh acme
-bash 03_co-signer/scripts/06_create-vm.sh acme
+bash 03_co-signer/scripts/06_get-merchant-database-info.sh acme
+bash 03_co-signer/scripts/07_create-vm.sh acme
 ```
 
 `02_create-mysql-instance.sh` 與 `03_create-cloud-kms-keyring.sh` 只需執行一次。
@@ -72,7 +73,7 @@ openssl rsa -in callback_handler_private.pem -out callback_handler_public.pem -p
 
 部署 API Co-Signer
 名稱: frozen-runner-co-signer-api
-ip白名單: `06_create-vm.sh` 建立完成以後的 public ip
+ip白名單: `07_create-vm.sh` 建立完成以後的 public ip
 callback
   - URL: {BASE_URL}/api/safeheron/03_co-signer/callback
   - 公鑰: 貼入上面生成的公鑰
