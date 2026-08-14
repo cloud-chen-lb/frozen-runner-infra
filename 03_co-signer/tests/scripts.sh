@@ -12,6 +12,7 @@ test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/05_create-mysql-database-user.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/06_print-merchant-co-signer-env.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/07_create-vm.sh" ]]
+  [[ -x "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/00_mysql_env.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/02_create-cloud-kms.sh" ]]
   [[ ! -e "${ROOT_DIR}/03_co-signer/scripts/06_create-vm.sh" ]]
@@ -54,6 +55,54 @@ test_merchant_argument_and_env_validation() {
       return 1
     fi
     [[ "${output}" == *"env-merchant-missing.sh"* ]]
+  done
+}
+
+test_cosigner_subnet_is_created_verified_and_rejects_drift() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3 \$4" == "compute networks subnets describe" ]]; then
+  case "\${SUBNET_STATE:-absent}" in
+    absent) exit 1 ;;
+    matching)
+      printf 'ipCidrRange: 10.40.0.0/24\nnetwork: projects/echox-project/global/networks/frozen-runner-vpc\nregion: projects/echox-project/regions/asia-east1\n'
+      ;;
+    drift)
+      printf 'ipCidrRange: \${DRIFT_CIDR}\nnetwork: projects/echox-project/global/networks/\${DRIFT_NETWORK}\nregion: projects/echox-project/regions/\${DRIFT_REGION}\n'
+      ;;
+  esac
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"
+  grep -F 'compute networks subnets create frozen-runner-cosigner-subnet' "${log}"
+
+  : >"${log}"
+  SUBNET_STATE=matching PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"
+  ! grep -F 'compute networks subnets create' "${log}"
+
+  for drift in cidr network region; do
+    : >"${log}"
+    case "${drift}" in
+      cidr) DRIFT_CIDR=10.41.0.0/24 DRIFT_NETWORK=frozen-runner-vpc DRIFT_REGION=asia-east1 ;;
+      network) DRIFT_CIDR=10.40.0.0/24 DRIFT_NETWORK=wrong-vpc DRIFT_REGION=asia-east1 ;;
+      region) DRIFT_CIDR=10.40.0.0/24 DRIFT_NETWORK=frozen-runner-vpc DRIFT_REGION=us-central1 ;;
+    esac
+    if SUBNET_STATE=drift DRIFT_CIDR="${DRIFT_CIDR}" DRIFT_NETWORK="${DRIFT_NETWORK}" \
+      DRIFT_REGION="${DRIFT_REGION}" PATH="${temp_dir}:${PATH}" \
+      bash "${ROOT_DIR}/03_co-signer/scripts/08_create-cosigner-subnet.sh"; then
+      printf 'Expected Co-Signer subnet %s drift to fail\n' "${drift}" >&2
+      return 1
+    fi
+    ! grep -F 'compute networks subnets create' "${log}"
+    unset DRIFT_CIDR DRIFT_NETWORK DRIFT_REGION
   done
 }
 
@@ -112,6 +161,10 @@ EOF
   grep -F -- 'cloudsql.instances.list' "${log}"
   grep -F -- 'cloudsql.databases.create' "${log}"
   grep -F -- 'cloudsql.databases.get' "${log}"
+  for permission in compute.subnetworks.create compute.subnetworks.get compute.subnetworks.list \
+    compute.subnetworks.use compute.subnetworks.useExternalIp; do
+    grep -F -- "${permission}" "${log}"
+  done
 }
 
 test_mysql_backup_flags_match_mysql_api() {
@@ -154,6 +207,7 @@ EOF
 
 test_script_layout_and_safety
 test_merchant_argument_and_env_validation
+test_cosigner_subnet_is_created_verified_and_rejects_drift
 test_merchant_kms_is_scoped_to_merchant
 test_role_removal_uses_shared_env
 test_iam_permissions_have_no_leading_whitespace

@@ -26,13 +26,14 @@ VM_VPC_NETWORK="frozen-runner-cosigner-subnet"
 
 ## 建立流程
 
-先完成 `01_share-resources` 的 VPC、Co-Signer subnet 與 Private Services Access。
-以下兩支是 Co-Signer 共用資源，只需執行一次：
+先由 `01_share-resources` 準備 shared VPC 與 Private Services Access，再執行本模組
+的 `08_create-cosigner-subnet.sh` 建立或驗證 Co-Signer subnet。以下資源只需執行一次：
 
 ```bash
 bash 03_co-signer/scripts/01_setup-exec-iam-account-role.sh
 bash 03_co-signer/scripts/02_create-mysql-instance.sh
 bash 03_co-signer/scripts/03_create-cloud-kms-keyring.sh
+bash 03_co-signer/scripts/08_create-cosigner-subnet.sh
 ```
 
 接著將 `echox` 替換成實際商戶 slug，逐一執行：

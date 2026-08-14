@@ -67,6 +67,10 @@ EOF
   update_permissions="$(grep -F 'iam roles update MainAppProvisioningOperator' "${log}")"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
+  for permission in compute.subnetworks.create compute.subnetworks.get compute.subnetworks.list \
+    compute.subnetworks.use; do
+    [[ "${create_permissions}" == *"${permission}"* ]]
+  done
 }
 
 test_role_lifecycle_arguments

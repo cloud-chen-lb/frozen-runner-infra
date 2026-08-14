@@ -1,6 +1,6 @@
 # Network
 
-本 module 建立主系統使用的 VPC、subnet、Private Services Access、Cloud
+本 module 建立主系統使用的 VPC、Private Services Access、Cloud
 Router 與 Cloud NAT。所有指令都以 `global-env/env.sh` 的
 `GOOGLE_PROJECT_ID` 為 GCP project target；`PROJECT_NAME` 只用於 resource
 naming。
@@ -11,8 +11,6 @@ naming。
 `PROJECT_NAME`、`GOOGLE_PROJECT_ID`、`GOOGLE_PROJECT_REGION`、
 `EXEC_IAM_ACCOUNT`。再確認 `scripts/env/env.sh` 的非機密設定：
 
-- `MAIN_APP_SUBNET_CIDR`
-- `COSIGNER_SUBNET_CIDR` (`10.40.0.0/24`)
 - `PRIVATE_SERVICES_RANGE_CIDR`
 - 其餘 `*_NAME` 由 `PROJECT_NAME` 組成，不要改成另一個 project 的名稱。
 
@@ -24,8 +22,6 @@ naming。
 bash 01_share-resources/scripts/01_setup-exec-iam-account-role.sh
 bash 01_share-resources/scripts/02_enable-apis.sh
 bash 01_share-resources/scripts/03_create-vpc.sh
-bash 01_share-resources/scripts/04_create-main-app-subnet.sh
-bash 01_share-resources/scripts/05_create-cosigner-subnet.sh
 bash 01_share-resources/scripts/05_create-private-services-access.sh
 bash 02_main-app/scripts/13_create-router-nat.sh
 ```

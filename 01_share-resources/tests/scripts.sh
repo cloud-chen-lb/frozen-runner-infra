@@ -72,6 +72,7 @@ EOF
   [[ "${create_permissions}" == *'compute.networks.updatePolicy'* ]]
   [[ "${create_permissions}" == *'compute.networks.use'* ]]
   [[ "${create_permissions}" == *'compute.globalAddresses.createInternal'* ]]
+  [[ "${create_permissions}" == *'compute.subnetworks.update'* ]]
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/ShareResourcesProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/ShareResourcesProvisioningOperator' "${log}"
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
@@ -98,7 +99,7 @@ printf 'gcloud must not be called\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh 05_create-cosigner-subnet.sh \
+  for script in 02_enable-apis.sh 03_create-vpc.sh \
     05_create-private-services-access.sh; do
     if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
       MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/01_share-resources/scripts/${script}"; then
@@ -125,13 +126,11 @@ esac
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  for script in 02_enable-apis.sh 03_create-vpc.sh 04_create-main-app-subnet.sh 05_create-cosigner-subnet.sh \
+  for script in 02_enable-apis.sh 03_create-vpc.sh \
     05_create-private-services-access.sh; do
     PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/01_share-resources/scripts/${script}"
   done
   grep -F 'compute networks create frozen-runner-vpc' "${log}"
-  grep -F 'compute networks subnets create frozen-runner-main-app-subnet' "${log}"
-  grep -F 'compute networks subnets create frozen-runner-cosigner-subnet' "${log}"
   grep -F 'compute addresses create frozen-runner-private-services-range' "${log}"
   grep -F 'services vpc-peerings connect' "${log}"
   ! grep -Eiq 'mysql|load-balancer|password|private[_-]?key|\.json|BEGIN .*PRIVATE KEY' "${log}"
@@ -193,7 +192,7 @@ EOF
     esac
     if SUBNET_CIDR="${SUBNET_CIDR:-10.20.0.0/24}" SUBNET_NETWORK="${SUBNET_NETWORK:-frozen-runner-vpc}" \
       SUBNET_REGION="${SUBNET_REGION:-asia-east1}" PATH="${temp_dir}:${PATH}" \
-      bash "${ROOT_DIR}/01_share-resources/scripts/04_create-main-app-subnet.sh"; then
+       bash "${ROOT_DIR}/02_main-app/scripts/12_create-main-app-subnet.sh"; then
       printf 'Expected main subnet %s drift to fail\n' "${drift_case}" >&2
       return 1
     fi

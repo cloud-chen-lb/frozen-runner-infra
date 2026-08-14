@@ -39,7 +39,7 @@
 - `01_share-resources/scripts/01_setup-exec-iam-account-role.sh`
 - `01_share-resources/scripts/02_enable-apis.sh`
 - `01_share-resources/scripts/03_create-vpc.sh`
-- `01_share-resources/scripts/04_create-main-app-subnet.sh`
+- `02_main-app/scripts/12_create-main-app-subnet.sh`
 - `01_share-resources/scripts/05_create-private-services-access.sh`
 - `01_share-resources/scripts/06_create-router-nat.sh`
 - `01_share-resources/scripts/99_remove-exec-iam-account-role.sh`
@@ -126,7 +126,7 @@
 
 - [x] **Step 1: Define permission ownership**
 
-  Network role covers VPC, subnet, address, router/NAT, service usage and compute network inspection. Cloud SQL role covers SQL instance/database/user and service networking inspection. Main-app role covers service account, Secret Manager metadata/IAM, Cloud Run inspection and project IAM needed for runtime bindings. Deploy role covers Cloud Build trigger, Cloud Run, Artifact Registry inspection and service-account IAM bindings.
+  Network role covers VPC, address, router/NAT, service usage and compute network inspection. Main-app and Co-Signer roles own their respective subnet operations. Cloud SQL role covers SQL instance/database/user and service networking inspection. Main-app role also covers service account, Secret Manager metadata/IAM, Cloud Run inspection and project IAM needed for runtime bindings. Deploy role covers Cloud Build trigger, Cloud Run, Artifact Registry inspection and service-account IAM bindings.
 
 - [x] **Step 2: Make role setup idempotent**
 
@@ -156,7 +156,7 @@
 
 - Create: `01_share-resources/scripts/02_enable-apis.sh`
 - Create: `01_share-resources/scripts/03_create-vpc.sh`
-- Create: `01_share-resources/scripts/04_create-main-app-subnet.sh`
+- Create: `02_main-app/scripts/12_create-main-app-subnet.sh`
 - Create: `01_share-resources/scripts/05_create-private-services-access.sh`
 - Create: `01_share-resources/scripts/06_create-router-nat.sh`
 - Modify: `01_share-resources/tests/scripts.sh`

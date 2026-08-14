@@ -41,6 +41,9 @@ compute.disks.create,\
 compute.addresses.create,\
 compute.addresses.get,\
 compute.addresses.use,\
+compute.subnetworks.create,\
+compute.subnetworks.get,\
+compute.subnetworks.list,\
 compute.subnetworks.use,\
 compute.subnetworks.useExternalIp,\
 cloudsql.instances.create,\
@@ -82,6 +85,9 @@ compute.disks.create,\
 compute.addresses.create,\
 compute.addresses.get,\
 compute.addresses.use,\
+compute.subnetworks.create,\
+compute.subnetworks.get,\
+compute.subnetworks.list,\
 compute.subnetworks.use,\
 compute.subnetworks.useExternalIp,\
 cloudsql.instances.create,\

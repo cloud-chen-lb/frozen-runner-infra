@@ -17,7 +17,7 @@
 
 ### Excluded
 
-- `05_co-signer/` 目錄及其 VM、KMS、merchant service account、static IP
+- `03_co-signer/` 目錄及其 VM、KMS、merchant service account、static IP
 - `frozen-runner-cosigner-subnet`
 - `frozen-runner-cosigner-mysql`、merchant database/user
 - 既有 Global Load Balancer、DNS、TLS、serverless backend 與 callback source restriction
@@ -102,7 +102,7 @@ Secret provisioning 只建立 secret metadata 與 IAM binding；實際 secret va
 
 `EXEC_IAM_ACCOUNT` 是資源建立期間的臨時操作者，不是 runtime identity。新增資源的 provisioning scripts 必須納入其授權流程，讓所有資源完成後可以乾淨撤銷。
 
-既有 `05_co-signer/scripts/01_setup-exec-iam-account-role.sh` 也屬於本 repo 的 provisioning 授權來源，因此必須提供對應的 scoped removal script；本次仍不執行任何 Co-Signer 資源建立。
+既有 `03_co-signer/scripts/01_setup-exec-iam-account-role.sh` 也屬於本 repo 的 provisioning 授權來源，因此必須提供對應的 scoped removal script；本次仍不執行任何 Co-Signer 資源建立。
 
 沿用目前 `01_cloudbuild/base/scripts/01_setup-exec-iam-account-role.sh` 的模式，但將權限拆成依資源邊界的 project-level custom roles：
 
