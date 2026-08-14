@@ -6,18 +6,22 @@
 # Active environment configuration for Cloud Build scripts.
 # Change these values when switching between development and production.
 
-# Beta
+# Beta 環境：切換至 Beta 時取消以下 4 行註解，並將 Prod 區塊的同名設定註解；
+# PROJECT_NAME 是資源名稱前綴，格式為小寫英數字與連字號組成的專案名稱。
 # PROJECT_NAME="frozen-runner"
+# GOOGLE_PROJECT_ID 是 GCP project ID，格式為 GCP 專案 ID；請填入要操作的 Beta 專案。
 # GOOGLE_PROJECT_ID="echox-beta"
+# GOOGLE_PROJECT_REGION 是 GCP 區域，格式為區域名稱；請填入資源部署所在區域。
 # GOOGLE_PROJECT_REGION="asia-east1"
+# EXEC_IAM_ACCOUNT 是執行佈建腳本的人員 IAM 電子郵件；格式為帳號 email。
 # EXEC_IAM_ACCOUNT="cloud.chen@getoken.io"
 
-# Prod
-# 專案名稱
+# Prod 環境：正式環境使用以下 4 行設定；切換環境時只保留一個區塊的同名設定。
+# PROJECT_NAME 是資源名稱前綴，格式為小寫英數字與連字號組成的專案名稱。
 PROJECT_NAME="frozen-runner"
-# GCP專案ID
+# GOOGLE_PROJECT_ID 是 GCP project ID，格式為 GCP 專案 ID；請填入正式環境專案。
 GOOGLE_PROJECT_ID="echox-project"
-# GCP專案區域
+# GOOGLE_PROJECT_REGION 是 GCP 區域，格式為區域名稱；須與既有網路、Cloud SQL 與 Cloud Run 配置一致。
 GOOGLE_PROJECT_REGION="asia-east1"
-# GCP專案執行IAM帳號
+# EXEC_IAM_ACCOUNT 是執行佈建腳本的人員 IAM 電子郵件；格式為帳號 email，且目前 gcloud 帳號須有對應權限。
 EXEC_IAM_ACCOUNT="cloud.chen@getoken.io"
