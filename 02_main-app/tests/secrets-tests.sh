@@ -40,7 +40,7 @@ EOF
   chmod +x "${temp_dir}/gcloud"
 
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
-    MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected invalid main-app env to fail\n' >&2
     return 1
   fi
@@ -76,7 +76,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected missing accessor to fail\n' >&2
     return 1
   fi
@@ -112,7 +112,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected invalid accessor to fail\n' >&2
     return 1
   fi
@@ -165,7 +165,7 @@ if [[ "\$1 \$2" == "secrets describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected secret setup to succeed\n' >&2
     return 1
   fi
@@ -192,7 +192,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH=":${PATH}" GLOBAL_ENV_FILE="/global-env.sh" MODULE_ENV_FILE="/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected app/migration secret name reuse to fail\n' >&2
     return 1
   fi
@@ -218,7 +218,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH=":${PATH}" GLOBAL_ENV_FILE="/global-env.sh" MODULE_ENV_FILE="/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected duplicate secret key to fail\n' >&2
     return 1
   fi
@@ -260,7 +260,7 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "iam service-accounts describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/12_setup-service-accounts.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/17_setup-service-accounts.sh"
   grep -F 'iam service-accounts create cb-frozen-runner-mini' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-migration' "${log}"
   grep -F 'iam service-accounts create cb-frozen-runner-deploy' "${log}"
@@ -284,7 +284,7 @@ if [[ "$1 $2 $3" == "iam service-accounts describe" ]]; then
 fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/12_setup-service-accounts.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/17_setup-service-accounts.sh"
 }
 
 test_secrets_metadata_and_scoped_accessors() {
@@ -298,7 +298,7 @@ printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2" == "secrets describe" ]]; then exit 1; fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"
   IFS=',' read -r -a app_items <<<"${APP_SECRET_MAPPING}"
   for item in "${app_items[@]}"; do
     secret_name="${item#*=}"
@@ -327,7 +327,7 @@ printf 'gcloud must not be called after secret drift\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected secret replication drift to fail\n' >&2
     return 1
   fi
@@ -353,7 +353,7 @@ EOF
   GLOBAL_ENV_FILE="${temp_dir}/global-env.sh"
   MODULE_ENV_FILE="${temp_dir}/module-env.sh"
   if PATH=":${PATH}" GLOBAL_ENV_FILE="/global-env.sh" MODULE_ENV_FILE="/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected invalid secret mapping to fail\n' >&2
     return 1
   fi

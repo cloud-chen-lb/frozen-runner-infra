@@ -15,9 +15,7 @@ test_global_env_wins_and_cloud_build_metadata_loads() {
 
   mkdir -p "${temp_dir}/02_main-app/scripts/env" "${temp_dir}/global-env"
   cp "${LOADER}" "${temp_dir}/02_main-app/scripts/00_env.sh"
-  cp "${ROOT_DIR}/02_main-app/scripts/env/postgres.env.sh" "${temp_dir}/02_main-app/scripts/env/postgres.env.sh"
   cp "${ROOT_DIR}/02_main-app/scripts/secrets.env.sh" "${temp_dir}/02_main-app/scripts/secrets.env.sh"
-  cp "${ROOT_DIR}/02_main-app/scripts/env/deploy.env.sh" "${temp_dir}/02_main-app/scripts/env/deploy.env.sh"
 
   cat >"${temp_dir}/global-env/env.sh" <<'EOF'
 PROJECT_NAME=global-project
@@ -25,7 +23,8 @@ GOOGLE_PROJECT_ID=global-project-id
 GOOGLE_PROJECT_REGION=global-region
 EXEC_IAM_ACCOUNT=global@example.com
 EOF
-  cat >"${temp_dir}/02_main-app/scripts/env/env.sh" <<'EOF'
+  cp "${ROOT_DIR}/02_main-app/scripts/env/env.sh" "${temp_dir}/02_main-app/scripts/env/env.sh"
+  cat >>"${temp_dir}/02_main-app/scripts/env/env.sh" <<'EOF'
 PROJECT_NAME=base-project
 GOOGLE_PROJECT_ID=base-project-id
 GOOGLE_PROJECT_REGION=base-region

@@ -1,6 +1,44 @@
-# 用途：提供主應用程式 Cloud Build connection/repository metadata。
-# 流程：由 00_env.sh 載入，供 connection 與 CI/release trigger 腳本使用。
-# 重要變數：CLOUD_BUILD_CONNECTION_NAME、CLOUD_BUILD_REPOSITORY_NAME。
-# 資源影響：只定義設定；安全/驗證限制：名稱變更前須確認既有 GCP 資源，避免 trigger 指錯來源。
+# 主應用程式模組的非機密設定。密碼與 secret value 不得放在本檔。
 CLOUD_BUILD_CONNECTION_NAME="Github_Connect"
 CLOUD_BUILD_REPOSITORY_NAME="echox-project-frozen-runner"
+
+POSTGRES_IDENTIFIER_PREFIX="${PROJECT_NAME//-/_}"
+POSTGRES_DATABASE_NAME="${POSTGRES_IDENTIFIER_PREFIX}"
+POSTGRES_APP_USER="${POSTGRES_IDENTIFIER_PREFIX}_app"
+POSTGRES_MIGRATION_USER="${POSTGRES_IDENTIFIER_PREFIX}_migration"
+POSTGRES_VERSION="POSTGRES_16"
+POSTGRES_EDITION="ENTERPRISE"
+POSTGRES_CPU="1"
+POSTGRES_MEMORY_MB="3840"
+POSTGRES_STORAGE_GB="20"
+POSTGRES_NETWORK_NAME="${PROJECT_NAME}-vpc"
+POSTGRES_INSTANCE_NAME="${PROJECT_NAME}-main-app-postgres"
+
+NETWORK_NAME="${PROJECT_NAME}-vpc"
+MAIN_APP_SUBNET_NAME="${PROJECT_NAME}-main-app-subnet"
+MAIN_APP_SUBNET_CIDR="10.20.0.0/24"
+ROUTER_NAME="${PROJECT_NAME}-router"
+EGRESS_IP_NAME="${PROJECT_NAME}-main-app-egress-ip"
+NAT_NAME="${PROJECT_NAME}-main-app-nat"
+
+: "${CLOUD_BUILD_SOURCE_BRANCH:=master}"
+: "${APP_SECRET_MAPPING:=APP_INTERNAL_ADMIN_PASSWORD=${PROJECT_NAME}-app-internal-admin-password:latest,APP_ALERT_API_BEARER_TOKEN=${PROJECT_NAME}-app-alert-api-bearer-token:latest,APP_DATA_ENCRYPTION_SECRET=${PROJECT_NAME}-app-data-encryption-secret:latest,APP_DATABASE_URL=${PROJECT_NAME}-app-database-url:latest,APP_MAILGUN_API_KEY=${PROJECT_NAME}-app-mailgun-api-key:latest}"
+: "${MIGRATION_SECRET_MAPPING:=APP_DATABASE_URL=${PROJECT_NAME}-migration-database-url:latest}"
+: "${APP_RUNTIME_ENV_VARS:=NEXT_PUBLIC_APP_DEFAULT_LOCALE=zh-TW,NEXT_PUBLIC_APP_LOG_LEVEL=log,APP_INTERNAL_ADMIN_USERNAME=product@echox.io,APP_ALERT_API_IP_ALLOWLIST=18.182.103.63,APP_PUBLIC_BASE_URL=https://frozen-runner.echox.io,APP_FROZEN_ALERT_BASE_URL=https://api.frozenalert.com,APP_MAIL_PROVIDER=mailgun,APP_MAILGUN_DOMAIN=mg.echox.app,APP_MAILGUN_API_URL=https://api.mailgun.net,APP_EMAIL_FROM=noreply@mg.echox.app}"
+: "${MIGRATION_RUNTIME_ENV_VARS:=}"
+: "${APP_MIN_INSTANCE:=}"
+: "${APP_MAX_INSTANCE:=}"
+: "${APP_CPU:=}"
+: "${APP_MEMORY:=}"
+: "${APP_TIMEOUT:=}"
+: "${APP_CONCURRENCY:=}"
+: "${APP_SERVICE_ACCOUNT_NAME:=cb-${PROJECT_NAME}-mini}"
+: "${MIGRATION_SERVICE_ACCOUNT_NAME:=cb-${PROJECT_NAME}-migration}"
+: "${DEPLOY_SERVICE_ACCOUNT_NAME:=cb-${PROJECT_NAME}-deploy}"
+
+APP_VPC_ARGS="--network=${NETWORK_NAME} --subnet=${MAIN_APP_SUBNET_NAME} --vpc-egress=all-traffic"
+MIGRATION_VPC_ARGS="--network=${NETWORK_NAME} --subnet=${MAIN_APP_SUBNET_NAME} --vpc-egress=all-traffic"
+DEPLOY_SMOKE_TEST_URL=""
+PRODUCTION_TRIGGER_NAME="${PROJECT_NAME}-production-deploy-trigger"
+PRODUCTION_APP_NAME="${PROJECT_NAME}-main-app"
+PRODUCTION_MIGRATION_JOB_NAME="${PROJECT_NAME}-db-migration"

@@ -94,7 +94,7 @@ case "\$1 \$2 \$3" in
 esac
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/02_create-postgres-instance.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_create-postgres-instance.sh"
   grep -F 'sql instances create frozen-runner-main-app-postgres' "${log}"
   grep -F -- '--project=echox-project' "${log}"
   grep -F -- '--database-version=POSTGRES_16' "${log}"
@@ -127,7 +127,7 @@ if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then
 fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/02_create-postgres-instance.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_create-postgres-instance.sh"; then
     printf 'Expected PostgreSQL instance drift to fail\n' >&2
     return 1
   fi
@@ -163,7 +163,7 @@ if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then
 fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/02_create-postgres-instance.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_create-postgres-instance.sh"; then
     printf 'Expected disabled PostgreSQL backups to fail\n' >&2
     return 1
   fi
@@ -199,7 +199,7 @@ if [[ "\$1 \$2 \$3" == "sql instances describe" ]]; then
 fi
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/02_create-postgres-instance.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_create-postgres-instance.sh"; then
     printf 'Expected ambiguous PostgreSQL backup output to fail\n' >&2
     return 1
   fi
@@ -221,7 +221,7 @@ esac
 EOF
   chmod +x "${temp_dir}/gcloud"
   printf 'app-password\nmigration-password\n' | PATH="${temp_dir}:${PATH}" \
-    bash "${ROOT_DIR}/02_main-app/scripts/03_create-postgres-database-users.sh"
+    bash "${ROOT_DIR}/02_main-app/scripts/15_create-postgres-database-users.sh"
   grep -F 'sql databases create frozen_runner' "${log}"
   grep -F 'sql users create frozen_runner_app' "${log}"
   grep -F 'sql users create frozen_runner_migration' "${log}"
@@ -247,7 +247,7 @@ printf '%s\n' "\$*" >>"${log}"
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/03_create-postgres-database-users.sh" </dev/null
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/15_create-postgres-database-users.sh" </dev/null
   ! grep -F 'sql databases create' "${log}"
   ! grep -F 'sql users create' "${log}"
 }
@@ -275,7 +275,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/02_create-postgres-instance.sh"; then
+    bash "${ROOT_DIR}/02_main-app/scripts/14_create-postgres-instance.sh"; then
     printf 'Expected invalid PostgreSQL sizing to fail\n' >&2
     return 1
   fi
@@ -344,7 +344,7 @@ exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/04_print-connection-strings.sh")"
+  output="$(PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/16_print-connection-strings.sh")"
   [[ "${output}" == $'APP_DATABASE_URL=postgresql://frozen_runner_app:<PASSWORD>@10.20.30.40/frozen_runner\nMIGRATION_DATABASE_URL=postgresql://frozen_runner_migration:<PASSWORD>@10.20.30.40/frozen_runner' ]]
   grep -F 'sql instances describe frozen-runner-main-app-postgres --project=echox-project --format=value(ipAddresses[0].ipAddress)' "${log}"
   ! grep -Eiq 'password|secret|app-password|migration-password' "${log}"
@@ -360,7 +360,7 @@ exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/04_print-connection-strings.sh" 2>"${temp_dir}/error"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/16_print-connection-strings.sh" 2>"${temp_dir}/error"; then
     printf 'Expected an empty Cloud SQL host to fail\n' >&2
     return 1
   fi

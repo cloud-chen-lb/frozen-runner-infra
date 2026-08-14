@@ -47,7 +47,7 @@ EOF
   chmod +x "${temp_dir}/gcloud"
 
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
-    MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/02_main-app/scripts/16_setup-secrets.sh"; then
+    MODULE_ENV_FILE="${temp_dir}/module-env.sh" bash "${ROOT_DIR}/02_main-app/scripts/18_setup-secrets.sh"; then
     printf 'Expected invalid deploy env to fail\n' >&2
     return 1
   fi
@@ -139,7 +139,7 @@ EOF
       esac
       if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
         MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-        bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" v1.2.3; then
+        bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" v1.2.3; then
         printf 'Expected invalid %s=%s to fail\n' "${variable}" "${value}" >&2
         return 1
       fi
@@ -189,7 +189,7 @@ printf 'gcloud called\n' >>"${log}"
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" 'v1;echo pwned'; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" 'v1;echo pwned'; then
     return 1
   fi
   [[ ! -s "${log}" ]]
@@ -227,7 +227,7 @@ EOF
   chmod +x "${temp_dir}/gcloud"
   if PATH="${temp_dir}:${PATH}" GLOBAL_ENV_FILE="${temp_dir}/global-env.sh" \
     MODULE_ENV_FILE="${temp_dir}/module-env.sh" \
-    bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" v1.2.3; then
+    bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" v1.2.3; then
     return 1
   fi
   [[ ! -s "${log}" ]]
@@ -252,7 +252,7 @@ EOF
     $'--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest\nAPP_DATABASE_URL=db:latest' \
     '--_APP_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=secret:latest;touch' \
     '--_MIGRATION_SECRET_MAPPING=APP_INTERNAL_ADMIN_PASSWORD=db:latest'; do
-    if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" \
+      if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" \
       v1.2.3 "${override}"; then
       printf 'Expected invalid secret override to fail: %q\n' "${override}" >&2
       return 1
@@ -274,7 +274,7 @@ EOF
   chmod +x "${temp_dir}/gcloud"
 
   for override in '--_APP_RUNTIME_ENV_VARS=APP_PUBLIC_BASE_URL=https://example.invalid;touch' $'--_MIGRATION_RUNTIME_ENV_VARS=APP_DATABASE_URL=db\n'; do
-    if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" \
+    if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" \
       v1.2.3 "${override}"; then
       printf 'Expected invalid runtime env override to fail: %q\n' "${override}" >&2
       return 1
@@ -306,7 +306,7 @@ printf 'unexpected gcloud command\n' >&2
 exit 99
 EOF
   chmod +x "${temp_dir}/gcloud"
-  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/13_create-production-trigger.sh"; then
+  if PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/20_create-production-trigger.sh"; then
     return 1
   fi
   ! grep -F 'builds triggers create' "${log}"
@@ -324,7 +324,7 @@ printf '\n' >>"${log}"
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh" v1.2.3
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh" v1.2.3
   run_lines="$(grep -n '<builds> <triggers> <run>' "${log}")"
   [[ -n "${run_lines}" ]]
   grep -F -- '<--region=asia-east1>' "${log}"
@@ -361,7 +361,7 @@ fi
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/13_create-production-trigger.sh"
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/20_create-production-trigger.sh"
   grep -F '_DEPLOYER_SERVICE_ACCOUNT=cb-frozen-runner-deploy' "${log}"
   grep -F '_APP_SERVICE_ACCOUNT=cb-frozen-runner-mini' "${log}"
   grep -F '_MIGRATOR_SERVICE_ACCOUNT=cb-frozen-runner-migration' "${log}"
@@ -369,8 +369,8 @@ EOF
 }
 
 test_trigger_does_not_load_main_app_mappings() {
-  ! grep -F '02_main-app/scripts/env/env.sh' "${ROOT_DIR}/02_main-app/scripts/13_create-production-trigger.sh"
-  grep -F 'APP_RUNTIME_ENV_VARS' "${ROOT_DIR}/02_main-app/scripts/env/deploy.env.sh"
+  ! grep -F '02_main-app/scripts/env/env.sh' "${ROOT_DIR}/02_main-app/scripts/20_create-production-trigger.sh"
+  grep -F 'APP_RUNTIME_ENV_VARS' "${ROOT_DIR}/02_main-app/scripts/env/env.sh"
 }
 
 test_deploy_yaml_migrates_before_app() {
@@ -395,8 +395,8 @@ test_deploy_yaml_resource_and_load_balancer_contract() {
     grep -F "app_resource_args+=(--${flag}" "${yaml}"
   done
   grep -F 'curl --fail --silent --show-error --max-time 15 "${_APP_LOAD_BALANCER_URL}"' "${yaml}"
-  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/02_main-app/scripts/14_run-production-deploy.sh"
-  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/02_main-app/scripts/13_create-production-trigger.sh"
+  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/02_main-app/scripts/21_run-production-deploy.sh"
+  ! grep -F 'APP_LOAD_BALANCER_URL' "${ROOT_DIR}/02_main-app/scripts/20_create-production-trigger.sh"
 }
 
 test_deploy_yaml_settings_are_independent() {
@@ -423,7 +423,7 @@ fi
 exit 0
 EOF
   chmod +x "${temp_dir}/gcloud"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/15_verify-deployment.sh" v1.2.3
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/22_verify-deployment.sh" v1.2.3
   ! grep -F 'curl ' "${log}"
   ! grep -F 'password\|private' "${log}"
 }
