@@ -44,11 +44,24 @@ NAT_NAME="${PROJECT_NAME}-main-app-nat"
 # CLOUD_BUILD_SOURCE_BRANCH 是手動 release trigger 使用的來源分支；格式為 Git 分支名稱。
 CLOUD_BUILD_SOURCE_BRANCH="master"
 # APP_SECRET_MAPPING 是 Cloud Run app 的 secret mapping；格式為逗號分隔的 ENV_VAR=SECRET_NAME:VERSION，值只能是 secret 資源名稱與版本。
-APP_SECRET_MAPPING="APP_INTERNAL_ADMIN_PASSWORD=${PROJECT_NAME}-app-internal-admin-password:latest,APP_ALERT_API_BEARER_TOKEN=${PROJECT_NAME}-app-alert-api-bearer-token:latest,APP_DATA_ENCRYPTION_SECRET=${PROJECT_NAME}-app-data-encryption-secret:latest,APP_DATABASE_URL=${PROJECT_NAME}-app-database-url:latest,APP_MAILGUN_API_KEY=${PROJECT_NAME}-app-mailgun-api-key:latest"
+APP_SECRET_MAPPING="APP_INTERNAL_ADMIN_PASSWORD=${PROJECT_NAME}-app-internal-admin-password:latest,"\
+"APP_ALERT_API_BEARER_TOKEN=${PROJECT_NAME}-app-alert-api-bearer-token:latest,"\
+"APP_DATA_ENCRYPTION_SECRET=${PROJECT_NAME}-app-data-encryption-secret:latest,"\
+"APP_DATABASE_URL=${PROJECT_NAME}-app-database-url:latest,"\
+"APP_MAILGUN_API_KEY=${PROJECT_NAME}-app-mailgun-api-key:latest"
 # MIGRATION_SECRET_MAPPING 是 migration job 的 secret mapping；格式同 APP_SECRET_MAPPING，使用逗號分隔 ENV_VAR=SECRET_NAME:VERSION。
 MIGRATION_SECRET_MAPPING="APP_DATABASE_URL=${PROJECT_NAME}-migration-database-url:latest"
 # APP_RUNTIME_ENV_VARS 是非機密 app runtime 環境變數；格式為逗號分隔的 KEY=VALUE，會傳給 Cloud Run。
-APP_RUNTIME_ENV_VARS="NEXT_PUBLIC_APP_DEFAULT_LOCALE=zh-TW,NEXT_PUBLIC_APP_LOG_LEVEL=log,APP_INTERNAL_ADMIN_USERNAME=product@echox.io,APP_ALERT_API_IP_ALLOWLIST=18.182.103.63,APP_PUBLIC_BASE_URL=https://frozen-runner.echox.io,APP_FROZEN_ALERT_BASE_URL=https://api.frozenalert.com,APP_MAIL_PROVIDER=mailgun,APP_MAILGUN_DOMAIN=mg.echox.app,APP_MAILGUN_API_URL=https://api.mailgun.net,APP_EMAIL_FROM=noreply@mg.echox.app"
+APP_RUNTIME_ENV_VARS="NEXT_PUBLIC_APP_DEFAULT_LOCALE=zh-TW,"\
+"NEXT_PUBLIC_APP_LOG_LEVEL=log,"\
+"APP_INTERNAL_ADMIN_USERNAME=product@echox.io,"\
+"APP_ALERT_API_IP_ALLOWLIST=18.182.103.63,"\
+"APP_PUBLIC_BASE_URL=https://frozen-runner.echox.io,"\
+"APP_FROZEN_ALERT_BASE_URL=https://api.frozenalert.com,"\
+"APP_MAIL_PROVIDER=mailgun,"\
+"APP_MAILGUN_DOMAIN=mg.echox.app,"\
+"APP_MAILGUN_API_URL=https://api.mailgun.net,"\
+"APP_EMAIL_FROM=noreply@mg.echox.app"
 # MIGRATION_RUNTIME_ENV_VARS 是 migration job 的非機密 runtime 變數；空值代表暫不覆寫平台或腳本預設，若 migration 需要值應在部署時設定。
 MIGRATION_RUNTIME_ENV_VARS=""
 # 以下 APP_* 空值代表暫不覆寫 Cloud Run 對應設定，使用平台或部署腳本預設；需要自訂資源限制時才填入要求的 gcloud flag 值。

@@ -30,6 +30,8 @@ PUBLIC_KEY="$(<"${PUBLIC_KEY_FILE}")"
   printf 'SSH public key must contain exactly one non-empty line: %s\n' "${PUBLIC_KEY_FILE}" >&2
   exit 1
 }
+SSH_USERNAME="$(id -un)"
+SSH_KEY_ENTRY="${SSH_USERNAME}:${PUBLIC_KEY}"
 
 VM_NAME="${PROJECT_NAME}-${MERCHANT_SLUG}-cosigner"
 FIREWALL_RULE_NAME="${PROJECT_NAME}-${MERCHANT_SLUG}-ssh-ingress"
@@ -42,13 +44,15 @@ if gcloud compute firewall-rules describe "${FIREWALL_RULE_NAME}" --project="${G
 fi
 existing_metadata="$(gcloud compute instances describe "${VM_NAME}" --project="${GOOGLE_PROJECT_ID}" \
   --zone="${VM_ZONE}" --format='get(metadata.ssh-keys)')"
-if ! printf '%s\n' "${existing_metadata}" | awk -v key="${PUBLIC_KEY}" '$0 == key { found=1 } END { exit !found }'; then
+if ! printf '%s\n' "${existing_metadata}" | awk -v raw="${PUBLIC_KEY}" -v entry="${SSH_KEY_ENTRY}" \
+  '$0 == raw || $0 == entry { found=1 } END { exit !found }'; then
   exit 0
 fi
 
 metadata_file="$(mktemp)"
 trap 'rm -f "${metadata_file}"' EXIT
-printf '%s\n' "${existing_metadata}" | awk -v key="${PUBLIC_KEY}" '$0 != key' >"${metadata_file}"
+printf '%s\n' "${existing_metadata}" | awk -v raw="${PUBLIC_KEY}" -v entry="${SSH_KEY_ENTRY}" \
+  '$0 != raw && $0 != entry' >"${metadata_file}"
 if [[ -s "${metadata_file}" ]]; then
   gcloud compute instances add-metadata "${VM_NAME}" --project="${GOOGLE_PROJECT_ID}" \
     --zone="${VM_ZONE}" --metadata-from-file="ssh-keys=${metadata_file}"

@@ -61,9 +61,10 @@ test_merchant_argument_and_env_validation() {
 }
 
 test_vm_ssh_key_is_instance_scoped_and_non_destructive() {
-  local temp_dir log
+  local temp_dir log ssh_username
   temp_dir="$(mktemp -d)"
   log="${temp_dir}/gcloud.log"
+  ssh_username="$(id -un)"
   trap 'rm -rf "$temp_dir"' RETURN
   mkdir -p "${temp_dir}/home/.ssh"
   printf 'ssh-rsa AAAAoperator operator@host\n' >"${temp_dir}/home/.ssh/id_rsa.pub"
@@ -82,29 +83,33 @@ EOF
   chmod +x "${temp_dir}/gcloud"
 
   HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
-    GCLOUD_METADATA='ssh-rsa AAAAother other@host' PATH="${temp_dir}:${PATH}" \
+    GCLOUD_METADATA=$'ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host' PATH="${temp_dir}:${PATH}" \
     bash "${ROOT_DIR}/03_co-signer/scripts/09_add-vm-ssh-key.sh" echox
   grep -F -- 'compute instances describe frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a' "${log}"
   grep -F -- 'compute instances add-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --metadata-from-file=ssh-keys=' "${log}"
-  grep -F -- $'metadata=ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host' "${log}"
+  grep -F -- 'metadata=ssh-rsa AAAAother other@host' "${log}"
+  grep -F -- "${ssh_username}:ssh-rsa AAAAoperator operator@host" "${log}"
+  ! grep -Fx -- 'metadata=ssh-rsa AAAAoperator operator@host' "${log}"
   ! grep -F -- 'projects add-metadata' "${log}"
 
   : >"${log}"
   HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
-    GCLOUD_METADATA=$'ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host' \
+    GCLOUD_METADATA=$'ssh-rsa AAAAother other@host\nssh-rsa AAAAoperator operator@host\n'"${ssh_username}"':ssh-rsa AAAAoperator operator@host' \
     PATH="${temp_dir}:${PATH}" \
     bash "${ROOT_DIR}/03_co-signer/scripts/10_remove-vm-ssh-key.sh" echox
   grep -F -- 'compute instances add-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --metadata-from-file=ssh-keys=' "${log}"
   grep -F -- 'metadata=ssh-rsa AAAAother other@host' "${log}"
-  ! grep -F -- 'metadata=ssh-rsa AAAAoperator operator@host' "${log}"
+  ! grep -F -- "metadata=${ssh_username}:ssh-rsa AAAAoperator operator@host" "${log}"
+  ! grep -Fx -- 'metadata=ssh-rsa AAAAoperator operator@host' "${log}"
   ! grep -F -- 'compute instances remove-metadata' "${log}"
   ! grep -F -- 'frozen-runner-other' "${log}"
 }
 
 test_vm_ssh_key_removal_clears_only_key() {
-  local temp_dir log
+  local temp_dir log ssh_username
   temp_dir="$(mktemp -d)"
   log="${temp_dir}/gcloud.log"
+  ssh_username="$(id -un)"
   trap 'rm -rf "$temp_dir"' RETURN
   mkdir -p "${temp_dir}/home/.ssh"
   printf 'ssh-rsa AAAAoperator operator@host\n' >"${temp_dir}/home/.ssh/id_rsa.pub"
@@ -118,16 +123,19 @@ EOF
   chmod +x "${temp_dir}/gcloud"
 
   HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
-    GCLOUD_METADATA='ssh-rsa AAAAoperator operator@host' PATH="${temp_dir}:${PATH}" \
+    GCLOUD_METADATA="${ssh_username}:ssh-rsa AAAAoperator operator@host" PATH="${temp_dir}:${PATH}" \
     bash "${ROOT_DIR}/03_co-signer/scripts/10_remove-vm-ssh-key.sh" echox
   grep -F -- 'compute instances remove-metadata frozen-runner-echox-cosigner --project=echox-project --zone=asia-east1-a --keys=ssh-keys' "${log}"
   ! grep -F -- 'compute instances add-metadata' "${log}"
 }
 
 test_vm_ssh_firewall_is_scoped_and_idempotent() {
-  local temp_dir log
+  local temp_dir log ssh_source_cidr ssh_username
   temp_dir="$(mktemp -d)"
   log="${temp_dir}/gcloud.log"
+  source "${ROOT_DIR}/03_co-signer/scripts/env/env-merchant-echox.sh"
+  ssh_source_cidr="${VM_SSH_SOURCE_CIDR}"
+  ssh_username="$(id -un)"
   trap 'rm -rf "$temp_dir"' RETURN
   mkdir -p "${temp_dir}/home/.ssh"
   printf 'ssh-rsa AAAAoperator operator@host\n' >"${temp_dir}/home/.ssh/id_rsa.pub"
@@ -142,10 +150,11 @@ fi
 EOF
   chmod +x "${temp_dir}/gcloud"
 
-  HOME="${temp_dir}/home" GCLOUD_LOG="${log}" GCLOUD_METADATA='ssh-rsa AAAAoperator operator@host' \
+  HOME="${temp_dir}/home" GCLOUD_LOG="${log}" \
+    GCLOUD_METADATA="${ssh_username}:ssh-rsa AAAAoperator operator@host" \
     GCLOUD_FIREWALL_STATE=absent PATH="${temp_dir}:${PATH}" \
     bash "${ROOT_DIR}/03_co-signer/scripts/09_add-vm-ssh-key.sh" echox
-  grep -F -- 'compute firewall-rules create frozen-runner-echox-ssh-ingress --project=echox-project --network=frozen-runner-vpc --direction=INGRESS --action=ALLOW --rules=tcp:22 --source-ranges=203.0.113.0/24 --target-service-accounts=echox-cosigner-sa@echox-project.iam.gserviceaccount.com --description=Temporarily allows SSH TCP/22 to the merchant Co-Signer VM from the configured operator CIDR and is removed by 10_remove-vm-ssh-key.sh.' "${log}"
+  grep -F -- "compute firewall-rules create frozen-runner-echox-ssh-ingress --project=echox-project --network=frozen-runner-vpc --direction=INGRESS --action=ALLOW --rules=tcp:22 --source-ranges=${ssh_source_cidr} --target-service-accounts=echox-cosigner-sa@echox-project.iam.gserviceaccount.com --description=Temporarily allows SSH TCP/22 to the merchant Co-Signer VM from the configured operator CIDR and is removed by 10_remove-vm-ssh-key.sh." "${log}"
   ! grep -F -- 'compute instances add-metadata' "${log}"
 
   : >"${log}"
