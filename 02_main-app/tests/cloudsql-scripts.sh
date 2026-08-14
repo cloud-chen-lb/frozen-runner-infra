@@ -71,7 +71,7 @@ EOF
   create_permissions="$(grep -F 'iam roles create MainAppProvisioningOperator' "${log}")"
   ROLE_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/01_setup-exec-iam-account-role.sh"
   update_permissions="$(grep -F 'iam roles update MainAppProvisioningOperator' "${log}")"
-  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"
+  BINDING_EXISTS=1 PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"
   [[ "${create_permissions#*--permissions=}" == "${update_permissions#*--permissions=}" ]]
   ! grep -Fq 'servicenetworking.services.list' <<<"${create_permissions}"
   ! grep -Fq 'compute.globalAddresses' <<<"${create_permissions}"
@@ -79,6 +79,51 @@ EOF
   grep -F 'projects add-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
   grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
+}
+
+test_role_removal_is_idempotent_and_strict() {
+  local temp_dir log
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${log}"
+if [[ "\$1 \$2 \$3" == "projects get-iam-policy" ]]; then
+  if [[ -n "\${POLICY_READ_ERROR:-}" ]]; then exit "\${POLICY_READ_ERROR}"; fi
+  if [[ -n "\${BINDING_EXISTS:-}" ]]; then
+    printf 'projects/echox-project/roles/MainAppProvisioningOperator\n'
+  fi
+  exit 0
+fi
+if [[ "\$1 \$2 \$3" == "projects remove-iam-policy-binding" && -z "\${BINDING_EXISTS:-}" ]]; then
+  exit 99
+fi
+if [[ "\$1 \$2 \$3" == "projects remove-iam-policy-binding" && -n "\${BINDING_EXISTS:-}" && -n "\${REMOVE_ERROR:-}" ]]; then
+  exit "\${REMOVE_ERROR}"
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"
+  grep -F 'projects get-iam-policy echox-project --flatten=bindings[].members --filter=bindings.members=user:cloud.chen@getoken.io AND bindings.role=projects/echox-project/roles/MainAppProvisioningOperator --format=value(bindings.role)' "${log}"
+  ! grep -F 'projects remove-iam-policy-binding' "${log}"
+
+  BINDING_EXISTS=1 PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"
+  grep -F 'projects remove-iam-policy-binding echox-project --member=user:cloud.chen@getoken.io --role=projects/echox-project/roles/MainAppProvisioningOperator' "${log}"
+
+  if BINDING_EXISTS=1 REMOVE_ERROR=23 PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"; then
+    printf 'Expected IAM policy removal failure to fail\n' >&2
+    return 1
+  fi
+
+  if POLICY_READ_ERROR=23 PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/02_main-app/scripts/99_remove-exec-iam-account-role.sh"; then
+    printf 'Expected IAM policy read failure to fail\n' >&2
+    return 1
+  fi
 }
 
 test_postgres_instance_create_contract() {
@@ -371,6 +416,7 @@ test_invalid_env_fails_before_gcloud
 test_valid_env_loads
 test_valid_env_can_be_sourced
 test_role_lifecycle_arguments
+test_role_removal_is_idempotent_and_strict
 test_postgres_instance_create_contract
 test_postgres_instance_drift_fails
 test_postgres_instance_backup_false_fails

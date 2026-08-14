@@ -7,4 +7,10 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/00_env.sh"
 ROLE_ID="MainAppProvisioningOperator"
 # 從 ${GOOGLE_PROJECT_ID} 移除執行帳號的 Cloud SQL role binding，修改專案 IAM policy。
-gcloud projects remove-iam-policy-binding "${GOOGLE_PROJECT_ID}" --member="user:${EXEC_IAM_ACCOUNT}" --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"
+binding_role="$(gcloud projects get-iam-policy "${GOOGLE_PROJECT_ID}" \
+  --flatten="bindings[].members" \
+  --filter="bindings.members=user:${EXEC_IAM_ACCOUNT} AND bindings.role=projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}" \
+  --format='value(bindings.role)')"
+if [[ -n "${binding_role}" ]]; then
+  gcloud projects remove-iam-policy-binding "${GOOGLE_PROJECT_ID}" --member="user:${EXEC_IAM_ACCOUNT}" --role="projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}"
+fi
