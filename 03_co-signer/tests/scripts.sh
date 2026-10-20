@@ -309,6 +309,7 @@ test_iam_permissions_have_no_leading_whitespace() {
 #!/usr/bin/env bash
 printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "iam roles describe" ]]; then
+  printf 'NOT_FOUND: Resource [projects/echox-project/roles/SafeheronCoSignerBuilderRole] not found.\n' >&2
   exit 1
 fi
 EOF
@@ -325,11 +326,110 @@ EOF
   grep -F -- 'compute.firewalls.create' "${log}"
   grep -F -- 'compute.firewalls.delete' "${log}"
   grep -F -- 'compute.firewalls.get' "${log}"
+  grep -F -- 'compute.networks.updatePolicy' "${log}"
   [[ "$(grep -o 'compute\.firewalls\.[a-z]*' "${log}" | sort -u | wc -l | tr -d ' ')" == 3 ]]
   for permission in compute.subnetworks.create compute.subnetworks.get compute.subnetworks.list \
     compute.subnetworks.use compute.subnetworks.useExternalIp; do
     grep -F -- "${permission}" "${log}"
   done
+}
+
+test_exec_role_adds_only_missing_permissions() {
+  local temp_dir log created_permissions missing_permissions extra_permission
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GCLOUD_LOG}"
+if [[ "$1 $2 $3" == "iam roles describe" ]]; then
+  case "${ROLE_STATE:-absent}" in
+    absent) printf 'NOT_FOUND: Resource [projects/echox-project/roles/SafeheronCoSignerBuilderRole] not found.\n' >&2; exit 1 ;;
+    error) printf 'permission denied\n' >&2; exit 7 ;;
+    credential-error) printf 'credential file not found\n' >&2; exit 1 ;;
+    present)
+      if [[ "$*" == *"value(deleted)"* ]]; then
+        printf 'False\n'
+      elif [[ "$*" == *'value[delimiter=";"](includedPermissions)'* ]]; then
+        if [[ "${SECOND_DESCRIBE_FAILS:-false}" == true ]]; then
+          printf 'permission denied\n' >&2; exit 7
+        fi
+        printf '%s\n' "${EXISTING_PERMISSIONS:-$(<"${ROLE_DATA}")}"
+      else
+        printf 'unexpected permissions format: %s\n' "$*" >&2; exit 9
+      fi
+      ;;
+  esac
+fi
+if [[ "$1 $2 $3" == "iam roles update" ]]; then
+  current_permissions="${EXISTING_PERMISSIONS:-$(<"${ROLE_DATA}")}"
+  for argument in "$@"; do
+    if [[ "${argument}" == --add-permissions=* ]]; then
+      added_permissions="${argument#*=}"
+      printf '%s;%s\n' "${current_permissions}" "${added_permissions//,/;}" >"${ROLE_DATA}"
+      break
+    fi
+  done
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  ROLE_DATA="${temp_dir}/role" GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"
+  if ! grep -F 'iam roles create SafeheronCoSignerBuilderRole' "${log}" >/dev/null; then
+    printf 'Expected absent role to be created\n' >&2; return 1
+  fi
+  created_permissions="$(sed -n 's/.*--permissions=//p' "${log}")"
+  if [[ -z "${created_permissions}" ]]; then
+    printf 'Expected role creation to include permissions\n' >&2; return 1
+  fi
+
+  missing_permissions="cloudkms.keyRings.get,compute.instances.list,compute.networks.updatePolicy"
+  extra_permission='custom.extraPermission'
+  local present_permissions
+  present_permissions="${created_permissions//cloudkms.keyRings.get,/}"
+  present_permissions="${present_permissions//compute.instances.list/}"
+  present_permissions="${present_permissions//compute.networks.updatePolicy/}"
+  present_permissions="${present_permissions//,/;}"
+  present_permissions="${present_permissions%;}"
+  : >"${log}"
+  ROLE_STATE=present EXISTING_PERMISSIONS="${present_permissions};${extra_permission}" \
+    ROLE_DATA="${temp_dir}/role" GCLOUD_LOG="${log}" \
+    PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"
+  if [[ "$(grep -Fxc "iam roles update SafeheronCoSignerBuilderRole --project=echox-project --add-permissions=${missing_permissions}" "${log}")" != 1 ]]; then
+    printf 'Expected update containing only missing permissions\n' >&2; return 1
+  fi
+
+  : >"${log}"
+  ROLE_STATE=present EXISTING_PERMISSIONS="${created_permissions//,/;};${extra_permission}" \
+    ROLE_DATA="${temp_dir}/role" GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"
+  if grep -E 'iam roles (update|create|undelete)' "${log}" >/dev/null; then
+    printf 'Complete role must not be mutated\n' >&2; return 1
+  fi
+
+  : >"${log}"
+  ROLE_STATE=present ROLE_DATA="${temp_dir}/role" GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"
+  if grep -E 'iam roles (update|create|undelete)' "${log}" >/dev/null; then
+    printf 'Second run after update must not mutate the role\n' >&2; return 1
+  fi
+
+  : >"${log}"
+  if ROLE_STATE=credential-error ROLE_DATA="${temp_dir}/role" GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"; then
+    printf 'Expected credential error to fail\n' >&2; return 1
+  fi
+  if grep -E 'iam roles (update|create|undelete)|projects add-iam-policy-binding' "${log}"; then return 1; fi
+
+  : >"${log}"
+  if ROLE_STATE=error GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh"; then
+    printf 'Expected IAM role describe error to fail\n' >&2
+    return 1
+  fi
+  if grep -E 'iam roles (create|update|undelete)|projects add-iam-policy-binding' "${log}"; then return 1; fi
 }
 
 test_mysql_backup_flags_match_mysql_api() {
@@ -381,6 +481,7 @@ test_cosigner_subnet_is_created_verified_and_rejects_drift
 test_merchant_kms_is_scoped_to_merchant
 test_role_removal_uses_shared_env
 test_iam_permissions_have_no_leading_whitespace
+test_exec_role_adds_only_missing_permissions
 test_mysql_backup_flags_match_mysql_api
 test_merchant_kms_is_rerunnable_after_account_creation
 test_vm_is_rerunnable_after_ip_creation
