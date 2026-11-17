@@ -33,6 +33,14 @@ for role in roles/artifactregistry.writer roles/logging.logWriter roles/cloudbui
   printf 'Granted %s to %s\n' "$role" "$CI_SERVICE_ACCOUNT"
 done
 
+# 授權執行帳號以共用 Cloud Build service account 身分建立或執行 trigger。
+gcloud iam service-accounts add-iam-policy-binding "$CI_SERVICE_ACCOUNT" \
+  --member="user:${EXEC_IAM_ACCOUNT}" \
+  --role=roles/iam.serviceAccountUser \
+  --project="$GOOGLE_PROJECT_ID" \
+  --quiet >/dev/null
+printf 'Granted roles/iam.serviceAccountUser to %s on %s\n' "$EXEC_IAM_ACCOUNT" "$CI_SERVICE_ACCOUNT"
+
 # 唯讀查詢 ${GOOGLE_PROJECT_ID} 的 project number，不修改專案資源。
 PROJECT_NUMBER="$(gcloud projects describe "$GOOGLE_PROJECT_ID" --format='value(projectNumber)')"
 if [[ -z "$PROJECT_NUMBER" ]]; then

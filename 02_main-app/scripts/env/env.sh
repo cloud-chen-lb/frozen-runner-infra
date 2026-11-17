@@ -2,7 +2,7 @@
 # CLOUD_BUILD_CONNECTION_NAME 是 Cloud Build GitHub connection 名稱；格式為既有 connection 的資源名稱，部署前必須填妥。
 CLOUD_BUILD_CONNECTION_NAME="Github_Connect"
 # CLOUD_BUILD_REPOSITORY_NAME 是 Cloud Build v2 repository 名稱；格式為既有 repository 資源名稱，部署前必須填妥。
-CLOUD_BUILD_REPOSITORY_NAME="echox-project-frozen-runner"
+CLOUD_BUILD_REPOSITORY_NAME="uupay-org-frozen-runner"
 
 # POSTGRES_IDENTIFIER_PREFIX 是 PostgreSQL 識別字首；由 PROJECT_NAME 將連字號替換為底線產生。
 POSTGRES_IDENTIFIER_PREFIX="${PROJECT_NAME//-/_}"
@@ -54,14 +54,14 @@ MIGRATION_SECRET_MAPPING="APP_DATABASE_URL=${PROJECT_NAME}-migration-database-ur
 # APP_RUNTIME_ENV_VARS 是非機密 app runtime 環境變數；格式為逗號分隔的 KEY=VALUE，會傳給 Cloud Run。
 APP_RUNTIME_ENV_VARS="NEXT_PUBLIC_APP_DEFAULT_LOCALE=zh-TW,"\
 "NEXT_PUBLIC_APP_LOG_LEVEL=log,"\
-"APP_INTERNAL_ADMIN_USERNAME=product@echox.io,"\
+"APP_INTERNAL_ADMIN_USERNAME=it.leon@uupay.website,"\
 "APP_ALERT_API_IP_ALLOWLIST=18.182.103.63,"\
-"APP_PUBLIC_BASE_URL=https://frozen-runner.echox.io,"\
+"APP_PUBLIC_BASE_URL=https://frozen-runner.uupay.website,"\
 "APP_FROZEN_ALERT_BASE_URL=https://api.frozenalert.com,"\
 "APP_MAIL_PROVIDER=mailgun,"\
-"APP_MAILGUN_DOMAIN=mg.echox.app,"\
+"APP_MAILGUN_DOMAIN=mg.uupay.website,"\
 "APP_MAILGUN_API_URL=https://api.mailgun.net,"\
-"APP_EMAIL_FROM=noreply@mg.echox.app"
+"APP_EMAIL_FROM=noreply@mg.uupay.website"
 # MIGRATION_RUNTIME_ENV_VARS 是 migration job 的非機密 runtime 變數；空值代表暫不覆寫平台或腳本預設，若 migration 需要值應在部署時設定。
 MIGRATION_RUNTIME_ENV_VARS=""
 # 以下 APP_* 空值代表暫不覆寫 Cloud Run 對應設定，使用平台或部署腳本預設；需要自訂資源限制時才填入要求的 gcloud flag 值。

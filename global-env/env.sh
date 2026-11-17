@@ -20,15 +20,8 @@
 # PROJECT_NAME 是資源名稱前綴，格式為小寫英數字與連字號組成的專案名稱。
 PROJECT_NAME="frozen-runner"
 # GOOGLE_PROJECT_ID 是 GCP project ID，格式為 GCP 專案 ID；請填入正式環境專案。
-GOOGLE_PROJECT_ID="echox-project"
+GOOGLE_PROJECT_ID="frozen-runner-production"
 # GOOGLE_PROJECT_REGION 是 GCP 區域，格式為區域名稱；須與既有網路、Cloud SQL 與 Cloud Run 配置一致。
-GOOGLE_PROJECT_REGION="asia-east1"
+GOOGLE_PROJECT_REGION="asia-northeast1"
 # EXEC_IAM_ACCOUNT 是執行佈建腳本的人員 IAM 電子郵件；格式為帳號 email，且目前 gcloud 帳號須有對應權限。
-EXEC_IAM_ACCOUNT="cloud.chen@getoken.io"
-
-# 新環境
-# GOOGLE_PROJECT_ID="frozen-runner-production"
-# GOOGLE_PROJECT_REGION 是 GCP 區域，格式為區域名稱；須與既有網路、Cloud SQL 與 Cloud Run 配置一致。
-# GOOGLE_PROJECT_REGION="asia-northeast1"
-# EXEC_IAM_ACCOUNT 是執行佈建腳本的人員 IAM 電子郵件；格式為帳號 email，且目前 gcloud 帳號須有對應權限。
-# EXEC_IAM_ACCOUNT="it.leon@uupay.website"
+EXEC_IAM_ACCOUNT="it.leon@uupay.website"

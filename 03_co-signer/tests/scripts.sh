@@ -5,6 +5,7 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 test_script_layout_and_safety() {
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/00_env.sh" ]]
+  [[ -x "${ROOT_DIR}/03_co-signer/scripts/00_enable-apis.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/01_setup-exec-iam-account-role.sh" ]]
   [[ -x "${ROOT_DIR}/03_co-signer/scripts/02_create-cosigner-subnet.sh" ]]
   [[ -f "${ROOT_DIR}/03_co-signer/scripts/03_create-mysql-instance.sh" ]]
@@ -284,6 +285,97 @@ EOF
   ! grep -F 'frozen-runner-other' "${log}"
 }
 
+test_cosigner_apis_are_enabled_idempotently() {
+  local temp_dir log output
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GCLOUD_LOG}"
+if [[ "$1 $2" == "services list" ]]; then
+  for argument in "$@"; do
+    if [[ "${argument}" == --filter=config.name=* ]]; then
+      api="${argument#*config.name=}"
+      if [[ "${API_STATE:-missing}" == all ]]; then
+        printf '%s\n' "${api}"
+      fi
+      exit 0
+    fi
+  done
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  output="$(API_STATE=missing GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/00_enable-apis.sh" 2>&1)"
+  for api in cloudkms.googleapis.com compute.googleapis.com iam.googleapis.com sqladmin.googleapis.com; do
+    [[ "$(grep -Fxc "services enable ${api} --project=frozen-runner-production" "${log}")" == 1 ]]
+    [[ "${output}" == *"Enabled API: ${api}"* ]]
+  done
+
+  : >"${log}"
+  output="$(API_STATE=all GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/00_enable-apis.sh" 2>&1)"
+  for api in cloudkms.googleapis.com compute.googleapis.com iam.googleapis.com sqladmin.googleapis.com; do
+    [[ "${output}" == *"API already enabled: ${api}"* ]]
+  done
+  ! grep -F 'services enable' "${log}"
+}
+
+test_keyring_creation_reports_status_and_preserves_errors() {
+  local temp_dir log output
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GCLOUD_LOG}"
+if [[ "$1 $2 $3" == "kms keyrings describe" ]]; then
+  case "${KEYRING_STATE:-absent}" in
+    present) printf 'keyring exists\n'; exit 0 ;;
+    absent)
+      printf 'ERROR: (gcloud.kms.keyrings.describe) NOT_FOUND: KeyRing projects/frozen-runner-production/locations/asia-northeast1/keyRings/%s not found.\n' \
+        "${EXPECTED_KEYRING}" >&2
+      exit 1
+      ;;
+    error) printf 'ERROR: permission denied\n' >&2; exit 1 ;;
+  esac
+fi
+if [[ "$1 $2 $3" == "kms keyrings create" ]]; then
+  printf 'keyring created\n'
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+
+  output="$(KEYRING_STATE=present GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/04_create-cloud-kms-keyring.sh" 2>&1)"
+  [[ "${output}" == *"Checking KMS keyring"* ]]
+  [[ "${output}" == *"already exists"* ]]
+  ! grep -F 'kms keyrings create' "${log}"
+
+  : >"${log}"
+  output="$(KEYRING_STATE=absent EXPECTED_KEYRING=frozen-runner-kms GCLOUD_LOG="${log}" \
+    PATH="${temp_dir}:${PATH}" bash "${ROOT_DIR}/03_co-signer/scripts/04_create-cloud-kms-keyring.sh" 2>&1)"
+  if [[ "${output}" != *"Checking KMS keyring"* ||
+    "${output}" != *"ERROR: (gcloud.kms.keyrings.describe) NOT_FOUND"* ||
+    "${output}" != *"Creating KMS keyring"* ]]; then
+    printf 'Expected missing-keyring describe error to be visible before creation; output was:\n%s\n' \
+      "${output}" >&2
+    return 1
+  fi
+  grep -F 'kms keyrings create frozen-runner-kms' "${log}"
+
+  : >"${log}"
+  if output="$(KEYRING_STATE=error GCLOUD_LOG="${log}" PATH="${temp_dir}:${PATH}" \
+    bash "${ROOT_DIR}/03_co-signer/scripts/04_create-cloud-kms-keyring.sh" 2>&1)"; then
+    printf 'Expected keyring describe permission error to fail\n' >&2
+    return 1
+  fi
+  [[ "${output}" == *"permission denied"* ]]
+  ! grep -F 'kms keyrings create' "${log}"
+}
+
 test_role_removal_uses_shared_env() {
   local temp_dir log
   temp_dir="$(mktemp -d)"
@@ -309,7 +401,7 @@ test_iam_permissions_have_no_leading_whitespace() {
 #!/usr/bin/env bash
 printf '%s\n' "\$*" >>"${log}"
 if [[ "\$1 \$2 \$3" == "iam roles describe" ]]; then
-  printf 'NOT_FOUND: Resource [projects/echox-project/roles/SafeheronCoSignerBuilderRole] not found.\n' >&2
+  printf 'ERROR: (gcloud.iam.roles.describe) NOT_FOUND: The role named projects/echox-project/roles/SafeheronCoSignerBuilderRole was not found.\n' >&2
   exit 1
 fi
 EOF
@@ -344,7 +436,7 @@ test_exec_role_adds_only_missing_permissions() {
 printf '%s\n' "$*" >>"${GCLOUD_LOG}"
 if [[ "$1 $2 $3" == "iam roles describe" ]]; then
   case "${ROLE_STATE:-absent}" in
-    absent) printf 'NOT_FOUND: Resource [projects/echox-project/roles/SafeheronCoSignerBuilderRole] not found.\n' >&2; exit 1 ;;
+    absent) printf 'ERROR: (gcloud.iam.roles.describe) NOT_FOUND: The role named projects/echox-project/roles/SafeheronCoSignerBuilderRole was not found.\n' >&2; exit 1 ;;
     error) printf 'permission denied\n' >&2; exit 7 ;;
     credential-error) printf 'credential file not found\n' >&2; exit 1 ;;
     present)
@@ -479,6 +571,8 @@ test_vm_ssh_firewall_is_removed_idempotently
 test_vm_ssh_firewall_rejects_ipv6_wildcard
 test_cosigner_subnet_is_created_verified_and_rejects_drift
 test_merchant_kms_is_scoped_to_merchant
+test_cosigner_apis_are_enabled_idempotently
+test_keyring_creation_reports_status_and_preserves_errors
 test_role_removal_uses_shared_env
 test_iam_permissions_have_no_leading_whitespace
 test_exec_role_adds_only_missing_permissions

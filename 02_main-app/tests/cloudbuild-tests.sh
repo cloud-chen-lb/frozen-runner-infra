@@ -73,4 +73,26 @@ EOF
 }
 
 test_role_lifecycle_arguments
+
+test_cloud_build_iam_grants_executor_act_as_on_ci_account() {
+  local temp_dir log executor_account
+  source "${LOADER}"
+  executor_account="${EXEC_IAM_ACCOUNT}"
+  temp_dir="$(mktemp -d)"
+  log="${temp_dir}/gcloud.log"
+  trap 'rm -rf "$temp_dir"' RETURN
+  cat >"${temp_dir}/gcloud" <<EOF
+#!/usr/bin/env bash
+printf '%s\\n' "\$*" >>"${log}"
+if [[ "\$1 \$2" == "projects describe" ]]; then
+  printf '1234567890\\n'
+fi
+EOF
+  chmod +x "${temp_dir}/gcloud"
+  PATH="${temp_dir}:/usr/bin:/bin:/usr/sbin:/sbin" bash "${ROOT_DIR}/02_main-app/scripts/03_setup-cloud-build-iam.sh"
+  grep -F "iam service-accounts add-iam-policy-binding cb-share-build@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com --member=user:${executor_account} --role=roles/iam.serviceAccountUser" "${log}" >/dev/null
+  grep -F 'iam service-accounts add-iam-policy-binding cb-share-build@' "${log}" | grep -F -- '--member=serviceAccount:service-1234567890@gcp-sa-cloudbuild.iam.gserviceaccount.com --role=roles/iam.serviceAccountUser' >/dev/null
+}
+
+test_cloud_build_iam_grants_executor_act_as_on_ci_account
 printf 'cloudbuild base scripts tests passed\n'

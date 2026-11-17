@@ -31,6 +31,7 @@ VM_SSH_SOURCE_CIDR="203.0.113.0/24"
 的建立流程。以下資源只需執行一次：
 
 ```bash
+bash 03_co-signer/scripts/00_enable-apis.sh
 bash 03_co-signer/scripts/01_setup-exec-iam-account-role.sh
 bash 03_co-signer/scripts/02_create-cosigner-subnet.sh
 bash 03_co-signer/scripts/03_create-mysql-instance.sh

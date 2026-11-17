@@ -78,6 +78,14 @@ EOF
   ! grep -Eiq '(^|[[:space:]])password=|--password|private[_-]?key|\.json($|[[:space:]])|BEGIN .*PRIVATE KEY' "${log}"
 }
 
+test_main_app_role_uses_router_permissions_for_nat() {
+  local permissions
+  permissions="$(grep '^ROLE_PERMISSIONS=' "${ROOT_DIR}/02_main-app/scripts/01_setup-exec-iam-account-role.sh")"
+  [[ "${permissions}" == *'compute.routers.create'* ]]
+  [[ "${permissions}" == *'compute.routers.update'* ]]
+  [[ "${permissions}" != *'compute.routers.nats.'* ]]
+}
+
 test_network_scripts_reject_invalid_input_before_gcloud() {
   local temp_dir script
   temp_dir="$(mktemp -d)"
@@ -289,6 +297,7 @@ test_invalid_env_fails_before_gcloud
 test_valid_env_loads
 test_valid_env_can_be_sourced
 test_role_lifecycle_arguments
+test_main_app_role_uses_router_permissions_for_nat
 test_network_scripts_reject_invalid_input_before_gcloud
 test_network_scripts_create_absent_resources
 test_network_scripts_fail_on_drift

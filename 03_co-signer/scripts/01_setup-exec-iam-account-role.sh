@@ -73,7 +73,8 @@ if role_deleted="$(gcloud iam roles describe "${ROLE_ID}" --project="${GOOGLE_PR
       --add-permissions="${missing_permissions_csv}"
   fi
 else
-  if ! grep -Fq "NOT_FOUND: Resource [projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}] not found." "${role_error_file}"; then
+  if ! grep -Fq "NOT_FOUND: Resource [projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID}] not found." "${role_error_file}" &&
+    ! grep -Fq "NOT_FOUND: The role named projects/${GOOGLE_PROJECT_ID}/roles/${ROLE_ID} was not found." "${role_error_file}"; then
     cat "${role_error_file}" >&2
     rm -f "${role_error_file}"
     exit 1
