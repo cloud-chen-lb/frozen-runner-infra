@@ -60,7 +60,7 @@ APP_RUNTIME_ENV_VARS="NEXT_PUBLIC_APP_DEFAULT_LOCALE=zh-TW,"\
 "APP_FROZEN_ALERT_BASE_URL=https://api.frozenalert.com,"\
 "APP_MAIL_PROVIDER=mailgun,"\
 "APP_MAILGUN_DOMAIN=mg.uupay.website,"\
-"APP_MAILGUN_API_URL=https://api.mailgun.net,"\
+"APP_MAILGUN_API_URL=https://api.eu.mailgun.net,"\
 "APP_EMAIL_FROM=noreply@mg.uupay.website"
 # MIGRATION_RUNTIME_ENV_VARS 是 migration job 的非機密 runtime 變數；空值代表暫不覆寫平台或腳本預設，若 migration 需要值應在部署時設定。
 MIGRATION_RUNTIME_ENV_VARS=""
